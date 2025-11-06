@@ -1,0 +1,14 @@
+{
+  "name": "integrate_definite_x2_0_1",
+  "request": {
+    "id": "g-003",
+    "op": "integrate",
+    "expr": ["Power", "x", 2],
+    "vars": ["x"],
+    "assumptions": { "bounds": [0, 1] },
+    "want": ["Text", "LaTeX"]
+  },
+  "expected": {
+    "text": "1/3"
+  }
+}

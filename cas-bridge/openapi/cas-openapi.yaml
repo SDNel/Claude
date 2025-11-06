@@ -1,0 +1,108 @@
+openapi: 3.0.3
+info:
+  title: PremierApp CAS Bridge API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+  /cas:
+    post:
+      summary: Execute a symbolic operation
+      operationId: casExec
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CasRequest'
+      responses:
+        '200':
+          description: CAS result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CasResponse'
+        '400': { description: Invalid request }
+        '504': { description: Timeout }
+  /steps:
+    post:
+      summary: Produce a step-by-step explanation (e.g., integration steps)
+      operationId: casSteps
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CasRequest'
+      responses:
+        '200':
+          description: Steps tree
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CasResponse'
+        '400': { description: Invalid request }
+components:
+  schemas:
+    MathJson:
+      description: MathJSON expression (https://cortexjs.io/mathjson/)
+      type: object
+    CasRequest:
+      type: object
+      required: [id, op, expr]
+      properties:
+        id: { type: string, example: req-001 }
+        op:
+          type: string
+          enum: [simplify, expand, factor, differentiate, integrate, limit, series, solve, linsolve, rref, eigen, steps]
+        expr: { $ref: '#/components/schemas/MathJson' }
+        vars: { type: array, items: { type: string } }
+        assumptions: { type: object, additionalProperties: true }
+        options:
+          type: object
+          properties:
+            form: { type: string, enum: [expanded, factored, canonical] }
+            timeoutMs: { type: integer, example: 1000 }
+            degreeLimit: { type: integer, example: 8 }
+        want:
+          type: array
+          items: { type: string, enum: [MathJSON, LaTeX, Text, Steps] }
+    StepNode:
+      type: object
+      properties:
+        rule: { type: string }
+        before: { $ref: '#/components/schemas/MathJson' }
+        after:  { $ref: '#/components/schemas/MathJson' }
+        explanation: { type: string }
+        children: { type: array, items: { $ref: '#/components/schemas/StepNode' } }
+    CasResponse:
+      type: object
+      required: [id, ok]
+      properties:
+        id: { type: string }
+        ok: { type: boolean }
+        result:
+          type: object
+          properties:
+            mathjson: { $ref: '#/components/schemas/MathJson' }
+            latex:    { type: string }
+            text:     { type: string }
+            steps:    { $ref: '#/components/schemas/StepNode' }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: object }
+        stats:
+          type: object
+          properties:
+            elapsedMs: { type: number }
+            backend:   { type: string, enum: [remote-sympy, pyodide-sympy, giac-wasm, compute-engine] }
+            cached:    { type: boolean }

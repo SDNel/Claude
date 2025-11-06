@@ -1,0 +1,13 @@
+{
+  "name": "integrate_indefinite_x2",
+  "request": {
+    "id": "g-002",
+    "op": "integrate",
+    "expr": ["Power", "x", 2],
+    "vars": ["x"],
+    "want": ["LaTeX"]
+  },
+  "expected": {
+    "latex": "\\frac{x^{3}}{3}"
+  }
+}

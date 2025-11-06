@@ -1,0 +1,13 @@
+{
+  "name": "factor_quadratic",
+  "request": {
+    "id": "g-005",
+    "op": "factor",
+    "expr": ["Add", ["Power", "x", 2], ["Mul", 2, "x"], 1],
+    "vars": ["x"],
+    "want": ["LaTeX"]
+  },
+  "expected": {
+    "latex": "\\left(x+1\\right)^{2}"
+  }
+}
