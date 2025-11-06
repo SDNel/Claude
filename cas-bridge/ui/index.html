@@ -13,10 +13,9 @@
 <link rel="stylesheet" href="https://unpkg.com/mathlive/dist/mathlive-static.css">
 <script defer src="https://unpkg.com/mathlive/dist/mathlive.min.js"></script>
 
-<!-- Compute Engine for LaTeX to MathJSON conversion -->
-<script type="module">
-  import { ComputeEngine } from 'https://unpkg.com/@cortexjs/compute-engine@0.19.2?module';
-  window.ce = new ComputeEngine();
+<!-- Simple LaTeX to MathJSON converter (inline) -->
+<script>
+// We'll define a simple converter function below in the main script
 </script>
 
 <style>
@@ -343,15 +342,145 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Convert LaTeX to MathJSON using Compute Engine
+  // Simple LaTeX to MathJSON converter for common cases
   function latexToMathJSON(latex) {
     try {
-      if (!window.ce) {
-        console.error('Compute Engine not loaded yet');
-        return null;
+      // Remove whitespace
+      latex = latex.trim();
+
+      // Simple recursive parser for common LaTeX patterns
+      function parse(str) {
+        str = str.trim();
+
+        // Numbers
+        if (/^-?\d+(\.\d+)?$/.test(str)) {
+          return parseFloat(str);
+        }
+
+        // Variables (single letter or symbol)
+        if (/^[a-zA-Z]$/.test(str)) {
+          return str;
+        }
+
+        // Fractions: \frac{num}{den}
+        const fracMatch = str.match(/^\\frac\{([^}]+)\}\{([^}]+)\}(.*)$/);
+        if (fracMatch) {
+          const num = parse(fracMatch[1]);
+          const den = parse(fracMatch[2]);
+          const rest = fracMatch[3];
+          const result = ["Divide", num, den];
+          return rest ? parseOperation(result, rest) : result;
+        }
+
+        // Powers: x^2 or x^{10}
+        const powMatch = str.match(/^([a-zA-Z]|\([^)]+\))\^(\{[^}]+\}|\d+)(.*)$/);
+        if (powMatch) {
+          const base = parse(powMatch[1].replace(/[{}]/g, ''));
+          const exp = parse(powMatch[2].replace(/[{}]/g, ''));
+          const rest = powMatch[3];
+          const result = ["Power", base, exp];
+          return rest ? parseOperation(result, rest) : result;
+        }
+
+        // Trig functions
+        const trigMatch = str.match(/^\\(sin|cos|tan|sec|csc|cot)\(([^)]+)\)(.*)$/);
+        if (trigMatch) {
+          const funcMap = {sin: "Sin", cos: "Cos", tan: "Tan", sec: "Sec", csc: "Csc", cot: "Cot"};
+          const arg = parse(trigMatch[2]);
+          const rest = trigMatch[3];
+          const result = [funcMap[trigMatch[1]], arg];
+          return rest ? parseOperation(result, rest) : result;
+        }
+
+        // Exponential: e^x
+        if (str.match(/^e\^/)) {
+          const expMatch = str.match(/^e\^(\{[^}]+\}|\w+)(.*)$/);
+          if (expMatch) {
+            const arg = parse(expMatch[1].replace(/[{}]/g, ''));
+            const rest = expMatch[2];
+            const result = ["Exp", arg];
+            return rest ? parseOperation(result, rest) : result;
+          }
+        }
+
+        // Parentheses
+        if (str.startsWith('(') || str.startsWith('\\left(')) {
+          const cleaned = str.replace(/^\\left\(/, '(').replace(/\\right\)/, ')');
+          const closeParen = findMatchingParen(cleaned);
+          if (closeParen !== -1) {
+            const inner = cleaned.substring(1, closeParen);
+            const rest = cleaned.substring(closeParen + 1);
+            const result = parse(inner);
+            return rest ? parseOperation(result, rest) : result;
+          }
+        }
+
+        // Addition/subtraction (lowest precedence)
+        for (let i = str.length - 1; i >= 0; i--) {
+          if (str[i] === '+' && !isInsideParens(str, i)) {
+            return ["Add", parse(str.substring(0, i)), parse(str.substring(i + 1))];
+          }
+          if (str[i] === '-' && i > 0 && !isInsideParens(str, i)) {
+            return ["Add", parse(str.substring(0, i)), ["Negate", parse(str.substring(i + 1))]];
+          }
+        }
+
+        // Multiplication (implicit or explicit)
+        for (let i = str.length - 1; i >= 0; i--) {
+          if ((str[i] === '*' || str[i] === '\\cdot') && !isInsideParens(str, i)) {
+            const left = str.substring(0, i);
+            const right = str.substring(str[i] === '*' ? i + 1 : i + 5);
+            return ["Multiply", parse(left), parse(right)];
+          }
+        }
+
+        // Simple variable or number
+        return str;
       }
-      const expr = window.ce.parse(latex);
-      return expr.json;
+
+      function parseOperation(left, rest) {
+        rest = rest.trim();
+        if (!rest) return left;
+
+        if (rest.startsWith('+')) {
+          return ["Add", left, parse(rest.substring(1))];
+        }
+        if (rest.startsWith('-')) {
+          return ["Add", left, ["Negate", parse(rest.substring(1))]];
+        }
+        if (rest.startsWith('*') || rest.startsWith('\\cdot')) {
+          const offset = rest.startsWith('*') ? 1 : 5;
+          return ["Multiply", left, parse(rest.substring(offset))];
+        }
+
+        return left;
+      }
+
+      function findMatchingParen(str) {
+        let depth = 0;
+        for (let i = 0; i < str.length; i++) {
+          if (str[i] === '(') depth++;
+          if (str[i] === ')') {
+            depth--;
+            if (depth === 0) return i;
+          }
+        }
+        return -1;
+      }
+
+      function isInsideParens(str, index) {
+        let depth = 0;
+        for (let i = 0; i < index; i++) {
+          if (str[i] === '(' || str.substring(i, i+6) === '\\left(') depth++;
+          if (str[i] === ')' || str.substring(i, i+7) === '\\right)') depth--;
+        }
+        return depth > 0;
+      }
+
+      const result = parse(latex);
+      console.log('Converted LaTeX to MathJSON:', latex, '->', result);
+      return result;
+
     } catch (e) {
       console.error('LaTeX parse error:', e);
       return null;
