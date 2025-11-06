@@ -18,11 +18,9 @@ def load_golden_fixtures() -> list[Dict[str, Any]]:
     fixtures = []
     for json_file in GOLDENS_DIR.glob("*.json"):
         with open(json_file, "r") as f:
-            # Read line by line since file has one JSON per line
-            for line in f:
-                line = line.strip()
-                if line:
-                    fixtures.append(json.loads(line))
+            # Each file contains one JSON object
+            fixture = json.load(f)
+            fixtures.append(fixture)
     return fixtures
 
 

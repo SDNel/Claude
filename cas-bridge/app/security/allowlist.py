@@ -11,6 +11,7 @@ ALLOWED_OPERATIONS: Set[str] = {
     "Add",
     "Subtract",
     "Multiply",
+    "Mul",  # Alias for Multiply
     "Divide",
     "Negate",
     "Power",
@@ -88,6 +89,14 @@ def validate_mathjson(expr: Any, max_depth: int = 50, current_depth: int = 0) ->
     if isinstance(expr, list):
         if len(expr) == 0:
             raise ValueError("Empty list in MathJSON")
+
+        # Check if it's a matrix (nested list of numbers)
+        if all(isinstance(row, list) for row in expr):
+            # It's a matrix - validate each element
+            for row in expr:
+                for element in row:
+                    validate_mathjson(element, max_depth, current_depth + 1)
+            return
 
         operation = expr[0]
 

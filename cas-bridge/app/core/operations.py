@@ -52,11 +52,11 @@ async def execute_operation(request: CasRequest, include_steps: bool = False) ->
     elif request.op.value == "solve":
         result_expr = _solve(sympy_expr, request.vars)
     elif request.op.value == "linsolve":
-        result_expr = _linsolve(request.expr)
+        result_expr = _linsolve(sympy_expr)
     elif request.op.value == "rref":
-        result_expr = _rref(request.expr)
+        result_expr = _rref(sympy_expr)
     elif request.op.value == "eigen":
-        result_expr = _eigen(request.expr)
+        result_expr = _eigen(sympy_expr)
     else:
         raise ValueError(f"Unsupported operation: {request.op}")
 
@@ -77,91 +77,192 @@ async def execute_operation(request: CasRequest, include_steps: bool = False) ->
     return result
 
 
-# Operation implementations (stubs - to be implemented)
+# Operation implementations
+
+import sympy as sp
 
 
 def _simplify(expr: Any) -> Any:
     """Simplify expression."""
-    # TODO: Implement using sympy.simplify()
-    raise NotImplementedError("simplify not yet implemented")
+    return sp.simplify(expr)
 
 
 def _expand(expr: Any) -> Any:
     """Expand expression."""
-    # TODO: Implement using sympy.expand()
-    raise NotImplementedError("expand not yet implemented")
+    return sp.expand(expr)
 
 
 def _factor(expr: Any) -> Any:
     """Factor expression."""
-    # TODO: Implement using sympy.factor()
-    raise NotImplementedError("factor not yet implemented")
+    return sp.factor(expr)
 
 
 def _differentiate(expr: Any, vars: Optional[list]) -> Any:
     """Differentiate expression."""
-    # TODO: Implement using sympy.diff()
-    raise NotImplementedError("differentiate not yet implemented")
+    if not vars or len(vars) == 0:
+        raise ValueError("differentiate requires at least one variable")
+
+    # Convert var from string to symbol if needed
+    var = sp.Symbol(vars[0]) if isinstance(vars[0], str) else vars[0]
+
+    # Differentiate
+    return sp.diff(expr, var)
 
 
 def _integrate(expr: Any, vars: Optional[list], assumptions: Optional[dict], steps: bool) -> Any:
     """Integrate expression."""
-    # TODO: Implement using sympy.integrate() and integral_steps()
-    raise NotImplementedError("integrate not yet implemented")
+    if not vars or len(vars) == 0:
+        raise ValueError("integrate requires at least one variable")
+
+    # Convert var from string to symbol if needed
+    var = sp.Symbol(vars[0]) if isinstance(vars[0], str) else vars[0]
+
+    # Check if it's definite or indefinite
+    if assumptions and ("bounds" in assumptions or ("lower" in assumptions and "upper" in assumptions)):
+        # Definite integral
+        if "bounds" in assumptions:
+            bounds = assumptions["bounds"]
+            lower, upper = bounds[0], bounds[1]
+        else:
+            lower = assumptions["lower"]
+            upper = assumptions["upper"]
+        result = sp.integrate(expr, (var, lower, upper))
+    else:
+        # Indefinite integral
+        result = sp.integrate(expr, var)
+
+    if steps:
+        # For now, return result without steps (steps require additional library)
+        return {"result": result, "steps": None}
+
+    return result
 
 
 def _limit(expr: Any, vars: Optional[list], assumptions: Optional[dict]) -> Any:
     """Compute limit."""
-    # TODO: Implement using sympy.limit()
-    raise NotImplementedError("limit not yet implemented")
+    if not vars or len(vars) == 0:
+        raise ValueError("limit requires at least one variable")
+
+    if not assumptions or "point" not in assumptions:
+        raise ValueError("limit requires a 'point' in assumptions")
+
+    # Convert var from string to symbol if needed
+    var = sp.Symbol(vars[0]) if isinstance(vars[0], str) else vars[0]
+    point = assumptions["point"]
+
+    # Handle direction if specified
+    direction = assumptions.get("direction", "+-")  # Default: both sides
+
+    # Map user-friendly direction names to SymPy's format
+    direction_map = {
+        "two-sided": "+-",
+        "from-left": "-",
+        "from-right": "+",
+        "+-": "+-",
+        "-": "-",
+        "+": "+"
+    }
+
+    direction = direction_map.get(direction, "+-")
+
+    return sp.limit(expr, var, point, dir=direction)
 
 
 def _series(expr: Any, vars: Optional[list], assumptions: Optional[dict]) -> Any:
     """Compute series expansion."""
-    # TODO: Implement using sympy.series()
-    raise NotImplementedError("series not yet implemented")
+    if not vars or len(vars) == 0:
+        raise ValueError("series requires at least one variable")
+
+    # Convert var from string to symbol if needed
+    var = sp.Symbol(vars[0]) if isinstance(vars[0], str) else vars[0]
+
+    # Get point and order from assumptions
+    point = assumptions.get("point", 0) if assumptions else 0
+    order = assumptions.get("order", 6) if assumptions else 6
+
+    # Compute series expansion
+    result = sp.series(expr, var, point, order)
+
+    # Remove O(...) term for cleaner output
+    return result.removeO()
 
 
 def _solve(expr: Any, vars: Optional[list]) -> Any:
     """Solve equation."""
-    # TODO: Implement using sympy.solve()
-    raise NotImplementedError("solve not yet implemented")
+    if not vars or len(vars) == 0:
+        # Try to solve for all free symbols
+        result = sp.solve(expr)
+    else:
+        # Convert var from string to symbol if needed
+        var = sp.Symbol(vars[0]) if isinstance(vars[0], str) else vars[0]
+        result = sp.solve(expr, var)
+
+    return result
 
 
 def _linsolve(expr: Any) -> Any:
     """Solve linear system."""
-    # TODO: Implement using sympy.linsolve()
-    raise NotImplementedError("linsolve not yet implemented")
+    # expr should be a dict with "A" and "b" keys
+    if not isinstance(expr, dict) or "A" not in expr or "b" not in expr:
+        raise ValueError("linsolve requires a dict with 'A' (matrix) and 'b' (vector)")
+
+    A = expr["A"]
+    b = expr["b"]
+
+    # Solve Ax = b
+    # linsolve returns a FiniteSet of solutions
+    result = sp.linsolve((A, b))
+
+    # Convert to list for easier handling
+    if result:
+        return list(result)[0] if len(result) == 1 else list(result)
+    return result
 
 
 def _rref(expr: Any) -> Any:
     """Compute reduced row echelon form."""
-    # TODO: Implement using sympy Matrix.rref()
-    raise NotImplementedError("rref not yet implemented")
+    if not isinstance(expr, sp.Matrix):
+        raise ValueError("rref requires a matrix")
+
+    # rref() returns (reduced_matrix, pivot_columns)
+    reduced, pivots = expr.rref()
+
+    # Return just the reduced matrix
+    return reduced
 
 
 def _eigen(expr: Any) -> Any:
     """Compute eigenvalues."""
-    # TODO: Implement using sympy Matrix.eigenvals()
-    raise NotImplementedError("eigen not yet implemented")
+    if not isinstance(expr, sp.Matrix):
+        raise ValueError("eigen requires a matrix")
+
+    # eigenvals() returns a dict {eigenvalue: multiplicity}
+    eigenvals = expr.eigenvals()
+
+    # Convert to list of eigenvalues
+    result = []
+    for val, mult in eigenvals.items():
+        for _ in range(mult):
+            result.append(val)
+
+    return result
 
 
-# Output formatters (stubs - to be implemented)
+# Output formatters
+
+from app.core.mathjson_parser import sympy_to_mathjson
 
 
 def _to_mathjson(expr: Any) -> Any:
     """Convert SymPy expression to MathJSON."""
-    # TODO: Implement SymPy → MathJSON conversion
-    raise NotImplementedError("mathjson formatter not yet implemented")
+    return sympy_to_mathjson(expr)
 
 
 def _to_latex(expr: Any) -> str:
     """Convert SymPy expression to LaTeX."""
-    # TODO: Implement using sympy.latex()
-    raise NotImplementedError("latex formatter not yet implemented")
+    return sp.latex(expr)
 
 
 def _to_text(expr: Any) -> str:
     """Convert SymPy expression to text."""
-    # TODO: Implement using str() or sympy.pretty()
-    raise NotImplementedError("text formatter not yet implemented")
+    return str(expr)
