@@ -345,8 +345,19 @@ window.addEventListener('DOMContentLoaded', () => {
   // Simple LaTeX to MathJSON converter for common cases
   function latexToMathJSON(latex) {
     try {
+      // Handle null/undefined
+      if (!latex) {
+        console.error('LaTeX input is null or undefined');
+        return null;
+      }
+
       // Remove whitespace
       latex = latex.trim();
+
+      if (latex === '') {
+        console.error('LaTeX input is empty');
+        return null;
+      }
 
       // Simple recursive parser for common LaTeX patterns
       function parse(str) {
@@ -523,14 +534,21 @@ window.addEventListener('DOMContentLoaded', () => {
     let payload;
 
     if (currentMode === 'expression') {
-      // Get LaTeX from MathLive
-      const latex = mathField.value;
+      // Get LaTeX from MathLive - need to wait for it to be ready
+      const latex = mathField.getValue ? mathField.getValue() : (mathField.value || '');
+
+      if (!latex || latex.trim() === '') {
+        jsonOutput.textContent = 'Error: Please enter a mathematical expression';
+        renderResult('');
+        return;
+      }
+
       console.log('LaTeX input:', latex);
 
       // Convert to MathJSON
       const expr = latexToMathJSON(latex);
       if (!expr) {
-        jsonOutput.textContent = 'Error: Could not parse mathematical expression';
+        jsonOutput.textContent = 'Error: Could not parse mathematical expression.\n\nTry simpler input or check the console for details.';
         renderResult('');
         return;
       }
@@ -598,7 +616,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Clear
   $('clearBtn').addEventListener('click', () => {
-    mathField.value = '';
+    if (mathField.setValue) {
+      mathField.setValue('');
+    } else {
+      mathField.value = '';
+    }
     resultOutput.innerHTML = '<span style="color:#999">Results will appear here...</span>';
     resultOutput.classList.add('empty');
     jsonOutput.textContent = 'Click "Run Operation" to see the API response...';
@@ -624,7 +646,11 @@ window.addEventListener('DOMContentLoaded', () => {
     };
 
     if (examples[e.target.value]) {
-      mathField.value = examples[e.target.value];
+      if (mathField.setValue) {
+        mathField.setValue(examples[e.target.value]);
+      } else {
+        mathField.value = examples[e.target.value];
+      }
     }
 
     if (assumptions[e.target.value]) {
