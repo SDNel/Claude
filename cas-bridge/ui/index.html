@@ -1,222 +1,510 @@
 <!doctype html>
-<html lang="en"><head>
+<html lang="en">
+<head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>CAS Bridge Test UI</title>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<title>CAS Bridge - Math Input</title>
+
+<!-- KaTeX for rendering output -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<!-- MathLive for input -->
+<link rel="stylesheet" href="https://unpkg.com/mathlive/dist/mathlive-static.css">
+<script defer src="https://unpkg.com/mathlive/dist/mathlive.min.js"></script>
+
+<!-- Compute Engine for LaTeX to MathJSON conversion -->
+<script type="module">
+  import { ComputeEngine } from 'https://unpkg.com/@cortexjs/compute-engine@0.19.2?module';
+  window.ce = new ComputeEngine();
+</script>
+
 <style>
- body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f6f7fb}
- header{background:#111827;color:#fff;padding:14px 20px;font-weight:600}
- main{max-width:1200px;margin:0 auto;padding:16px}
- .card{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:16px;margin:12px 0}
- label{font-weight:600;margin-top:10px;display:block}
- input,textarea,select{width:100%;border:1px solid #d1d5db;border-radius:8px;padding:8px;margin-top:6px;font-family:monospace}
- .row{display:flex;gap:16px}
- .col{flex:1}
- .btn{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:600}
- .btn.secondary{background:#6b7280}
- pre{background:#0b1020;color:#cbd5e1;padding:12px;border-radius:8px;overflow:auto;font-size:13px}
- .math{background:#fff;border:1px solid #e5e7eb;border-radius:8px;min-height:48px;padding:12px;font-size:18px}
- .note{font-size:12px;color:#6b7280;margin-top:8px}
- .examples{background:#f9fafb;padding:12px;border-radius:6px;margin-top:8px;font-size:13px}
- .examples code{background:#fff;padding:2px 6px;border-radius:4px;font-family:monospace}
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+  }
+
+  header {
+    background: rgba(0,0,0,0.3);
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 700;
+  }
+
+  header p {
+    margin: 8px 0 0 0;
+    opacity: 0.9;
+    font-size: 14px;
+  }
+
+  main {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 0 20px;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    padding: 24px;
+    margin: 20px 0;
+  }
+
+  .card h2 {
+    margin: 0 0 20px 0;
+    font-size: 20px;
+    color: #333;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 8px;
+  }
+
+  .input-group {
+    margin: 16px 0;
+  }
+
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #555;
+    font-size: 14px;
+  }
+
+  math-field {
+    display: block;
+    width: 100%;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 24px;
+    background: #fafafa;
+    transition: all 0.3s;
+  }
+
+  math-field:focus {
+    border-color: #667eea;
+    background: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+  }
+
+  select, input, textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s;
+  }
+
+  select:focus, input:focus, textarea:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  button {
+    flex: 1;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102,126,234,0.4);
+  }
+
+  .btn-secondary {
+    background: #f0f0f0;
+    color: #555;
+  }
+
+  .btn-secondary:hover {
+    background: #e0e0e0;
+  }
+
+  .result-box {
+    background: #fafafa;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 24px;
+    min-height: 80px;
+    font-size: 28px;
+    text-align: center;
+    color: #333;
+  }
+
+  .result-box.empty {
+    color: #999;
+    font-size: 16px;
+  }
+
+  pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 16px;
+    border-radius: 8px;
+    overflow: auto;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .help-text {
+    font-size: 12px;
+    color: #777;
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+  .mode-switch {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .mode-btn {
+    padding: 8px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+    transition: all 0.3s;
+  }
+
+  .mode-btn.active {
+    background: #667eea;
+    color: #fff;
+    border-color: #667eea;
+  }
+
+  .hidden {
+    display: none !important;
+  }
 </style>
 </head>
+
 <body>
-<header>CAS Bridge Test UI</header>
+<header>
+  <h1>🧮 CAS Bridge</h1>
+  <p>Computer Algebra System with Visual Math Input</p>
+</header>
+
 <main>
- <div class="card">
-  <div class="row">
-    <div class="col">
-      <label>CAS Service URL</label>
-      <input id="serviceUrl" value="http://localhost:8000/cas"/>
+  <!-- Input Card -->
+  <div class="card">
+    <h2>📝 Input</h2>
+
+    <div class="mode-switch">
+      <button class="mode-btn active" data-mode="expression">Expression Mode</button>
+      <button class="mode-btn" data-mode="matrix">Matrix Mode</button>
     </div>
-    <div class="col">
-      <label>Operation</label>
-      <select id="op">
-        <option>differentiate</option>
-        <option>integrate</option>
-        <option>simplify</option>
-        <option>expand</option>
-        <option>factor</option>
-        <option>limit</option>
-        <option>series</option>
-        <option>solve</option>
-        <option>linsolve</option>
-        <option>rref</option>
-        <option>eigen</option>
-      </select>
+
+    <!-- Expression Input Mode -->
+    <div id="expressionMode">
+      <div class="input-group">
+        <label>Enter Mathematical Expression</label>
+        <math-field id="mathInput" virtual-keyboard-mode="manual">
+          \sin(x)
+        </math-field>
+        <p class="help-text">Click the keyboard button or use your keyboard to enter math. Try: x^2, \sin(x), \frac{a}{b}, \int, etc.</p>
+      </div>
+
+      <div class="row">
+        <div class="input-group">
+          <label>Operation</label>
+          <select id="operation">
+            <option value="differentiate">Differentiate</option>
+            <option value="integrate">Integrate</option>
+            <option value="simplify">Simplify</option>
+            <option value="expand">Expand</option>
+            <option value="factor">Factor</option>
+            <option value="limit">Limit</option>
+            <option value="series">Taylor Series</option>
+            <option value="solve">Solve Equation</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label>Variable(s)</label>
+          <input type="text" id="variables" value="x" placeholder="e.g., x or x,y">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Assumptions (JSON)</label>
+        <input type="text" id="assumptions" placeholder='e.g., {"bounds":[0,1]} or {"point":0,"direction":"two-sided"}'>
+        <p class="help-text">
+          For integrals: {"bounds":[0,1]} | For limits: {"point":0,"direction":"two-sided"} | For series: {"point":0,"order":5}
+        </p>
+      </div>
+    </div>
+
+    <!-- Matrix Input Mode -->
+    <div id="matrixMode" class="hidden">
+      <div class="input-group">
+        <label>Enter Matrix (JSON)</label>
+        <textarea id="matrixInput" rows="5" placeholder='[[1,2,3],[4,5,6],[7,8,9]]'>[[2,0],[0,3]]</textarea>
+        <p class="help-text">Enter matrix as nested arrays. For linear systems use: {"A":[[2,1],[1,3]],"b":[1,0]}</p>
+      </div>
+
+      <div class="input-group">
+        <label>Matrix Operation</label>
+        <select id="matrixOperation">
+          <option value="rref">Row Reduced Echelon Form (RREF)</option>
+          <option value="eigen">Eigenvalues</option>
+          <option value="linsolve">Solve Linear System</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-primary" id="runBtn">▶ Run Operation</button>
+      <button class="btn-secondary" id="clearBtn">Clear</button>
     </div>
   </div>
 
-  <label>Expression (MathJSON format)</label>
-  <textarea id="expr" rows="3" placeholder='["Sin", "x"] or ["Power", "x", 2]'>["Sin", "x"]</textarea>
-
-  <div class="examples">
-    <strong>MathJSON Examples:</strong><br>
-    • sin(x): <code>["Sin", "x"]</code><br>
-    • x²: <code>["Power", "x", 2]</code><br>
-    • x² + 2x + 1: <code>["Add", ["Power", "x", 2], ["Multiply", 2, "x"], 1]</code><br>
-    • sin(x)/x: <code>["Divide", ["Sin", "x"], "x"]</code><br>
-    • e^x: <code>["Exp", "x"]</code>
-  </div>
-
-  <div class="row">
-    <div class="col">
-      <label>Variables (comma separated)</label>
-      <input id="vars" placeholder="x" value="x"/>
-    </div>
-    <div class="col">
-      <label>Assumptions (JSON)</label>
-      <input id="assump" placeholder='{"bounds":[0,1]} or {"point":0,"direction":"two-sided"}'/>
+  <!-- Result Card -->
+  <div class="card">
+    <h2>✨ Result</h2>
+    <div id="resultOutput" class="result-box empty">
+      Results will appear here...
     </div>
   </div>
 
-  <label>Matrix (for linsolve/rref/eigen operations)</label>
-  <textarea id="matrix" rows="3" placeholder='[[2,1],[1,3]] or {"A":[[2,1],[1,3]],"b":[1,0]}'></textarea>
-
-  <div class="row" style="margin-top:12px">
-    <button class="btn" id="run">▶ Run Operation</button>
-    <button class="btn secondary" id="clear">Clear Results</button>
+  <!-- JSON Response Card -->
+  <div class="card">
+    <h2>📋 Response Details</h2>
+    <pre id="jsonOutput">Click "Run Operation" to see the API response...</pre>
   </div>
-  <p class="note">
-    <strong>Tips:</strong> For definite integrals use <code>{"bounds":[0,1]}</code>.
-    For series use <code>{"point":0,"order":5}</code>.
-    For limits use <code>{"point":0,"direction":"two-sided"}</code>.
-  </p>
- </div>
-
- <div class="card">
-   <h3>Result (Rendered LaTeX)</h3>
-   <div id="outLatex" class="math" style="color:#999">Results will appear here...</div>
- </div>
-
- <div class="card">
-   <h3>Raw JSON Response</h3>
-   <pre id="outJson">Click "Run Operation" to execute...</pre>
- </div>
 </main>
 
 <script>
-const $ = (id) => document.getElementById(id);
-const matrixOps = new Set(['linsolve','rref','eigen']);
+// Wait for MathLive and Compute Engine to load
+window.addEventListener('DOMContentLoaded', () => {
+  const $ = (id) => document.getElementById(id);
+  const mathField = $('mathInput');
+  const resultOutput = $('resultOutput');
+  const jsonOutput = $('jsonOutput');
 
-function parseJSON(s) {
-  if (!s || !s.trim()) return undefined;
-  try { return JSON.parse(s); }
-  catch(e) {
-    console.error('JSON parse error:', e);
-    return undefined;
-  }
-}
+  let currentMode = 'expression';
 
-function renderLatex(latexStr) {
-  const el = $('outLatex');
-  if (!latexStr) {
-    el.innerHTML = '<span style="color:#999">No LaTeX output</span>';
-    return;
-  }
-  try {
-    katex.render(latexStr, el, {throwOnError: false, displayMode: true});
-  } catch(e) {
-    el.textContent = latexStr;
-    console.error('KaTeX render error:', e);
-  }
-}
+  // Mode switching
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMode = btn.dataset.mode;
 
-$('run').addEventListener('click', async () => {
-  const url = $('serviceUrl').value.trim() || 'http://localhost:8000/cas';
-  const op = $('op').value;
-  const varsInput = $('vars').value.trim();
-  const vars = varsInput ? varsInput.split(',').map(s => s.trim()).filter(Boolean) : undefined;
-  const assumptions = parseJSON($('assump').value);
-
-  let expr = null;
-  const matrixInput = $('matrix').value.trim();
-
-  if (matrixInput && matrixOps.has(op)) {
-    expr = parseJSON(matrixInput);
-  } else {
-    expr = parseJSON($('expr').value);
-  }
-
-  if (!expr) {
-    $('outJson').textContent = 'Error: Invalid expression JSON';
-    renderLatex('');
-    return;
-  }
-
-  const payload = {
-    id: 'ui-' + Math.random().toString(36).slice(2),
-    op,
-    expr,
-    vars,
-    assumptions,
-    want: ["LaTeX", "MathJSON", "Text"]
-  };
-
-  $('outJson').textContent = "Request:\n" + JSON.stringify(payload, null, 2) + "\n\nResponse: (waiting...)";
-  renderLatex('');
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
+      if (currentMode === 'expression') {
+        $('expressionMode').classList.remove('hidden');
+        $('matrixMode').classList.add('hidden');
+      } else {
+        $('expressionMode').classList.add('hidden');
+        $('matrixMode').classList.remove('hidden');
+      }
     });
+  });
 
-    const data = await res.json();
-    $('outJson').textContent = "Request:\n" + JSON.stringify(payload, null, 2) + "\n\nResponse:\n" + JSON.stringify(data, null, 2);
-
-    if (data.result && data.result.latex) {
-      renderLatex(data.result.latex);
-    } else {
-      renderLatex('');
+  // Convert LaTeX to MathJSON using Compute Engine
+  function latexToMathJSON(latex) {
+    try {
+      if (!window.ce) {
+        console.error('Compute Engine not loaded yet');
+        return null;
+      }
+      const expr = window.ce.parse(latex);
+      return expr.json;
+    } catch (e) {
+      console.error('LaTeX parse error:', e);
+      return null;
     }
-  } catch(e) {
-    $('outJson').textContent = "Request failed: " + e.message + "\n\nMake sure the CAS service is running at " + url;
-    renderLatex('');
   }
-});
 
-$('clear').addEventListener('click', () => {
-  $('outJson').textContent = 'Click "Run Operation" to execute...';
-  $('outLatex').innerHTML = '<span style="color:#999">Results will appear here...</span>';
-});
-
-// Quick test examples
-$('op').addEventListener('change', (e) => {
-  const op = e.target.value;
-  const examples = {
-    'differentiate': '["Sin", "x"]',
-    'integrate': '["Power", "x", 2]',
-    'simplify': '["Add", ["Power", ["Add", "x", 1], 2], ["Negate", 1]]',
-    'expand': '["Power", ["Add", "x", 1], 3]',
-    'factor': '["Add", ["Power", "x", 2], ["Multiply", 2, "x"], 1]',
-    'limit': '["Divide", ["Sin", "x"], "x"]',
-    'series': '["Exp", "x"]',
-    'solve': '["Add", ["Power", "x", 2], ["Negate", 4]]',
-    'linsolve': '',
-    'rref': '',
-    'eigen': ''
-  };
-
-  const exampleAssumptions = {
-    'limit': '{"point": 0, "direction": "two-sided"}',
-    'series': '{"point": 0, "order": 5}',
-    'integrate': '{"bounds": [0, 1]}'
-  };
-
-  if (examples[op]) $('expr').value = examples[op];
-  if (exampleAssumptions[op]) $('assump').value = exampleAssumptions[op];
-  else $('assump').value = '';
-
-  if (matrixOps.has(op)) {
-    $('matrix').value = op === 'linsolve' ? '{"A":[[2,1],[1,3]],"b":[1,0]}' : '[[2,0],[0,3]]';
-  } else {
-    $('matrix').value = '';
+  // Parse JSON safely
+  function parseJSON(str) {
+    if (!str || !str.trim()) return undefined;
+    try {
+      return JSON.parse(str);
+    } catch (e) {
+      console.error('JSON parse error:', e);
+      return undefined;
+    }
   }
+
+  // Render result with KaTeX
+  function renderResult(latex) {
+    if (!latex) {
+      resultOutput.innerHTML = '<span style="color:#999">No result</span>';
+      resultOutput.classList.add('empty');
+      return;
+    }
+
+    try {
+      resultOutput.classList.remove('empty');
+      katex.render(latex, resultOutput, {
+        throwOnError: false,
+        displayMode: true
+      });
+    } catch (e) {
+      resultOutput.textContent = latex;
+      console.error('KaTeX render error:', e);
+    }
+  }
+
+  // Run Operation
+  $('runBtn').addEventListener('click', async () => {
+    let payload;
+
+    if (currentMode === 'expression') {
+      // Get LaTeX from MathLive
+      const latex = mathField.value;
+      console.log('LaTeX input:', latex);
+
+      // Convert to MathJSON
+      const expr = latexToMathJSON(latex);
+      if (!expr) {
+        jsonOutput.textContent = 'Error: Could not parse mathematical expression';
+        renderResult('');
+        return;
+      }
+
+      console.log('MathJSON:', expr);
+
+      const op = $('operation').value;
+      const varsStr = $('variables').value.trim();
+      const vars = varsStr ? varsStr.split(',').map(v => v.trim()) : undefined;
+      const assumptions = parseJSON($('assumptions').value);
+
+      payload = {
+        id: 'ui-' + Math.random().toString(36).slice(2),
+        op,
+        expr,
+        vars,
+        assumptions,
+        want: ['LaTeX', 'MathJSON', 'Text']
+      };
+    } else {
+      // Matrix mode
+      const matrixStr = $('matrixInput').value.trim();
+      const expr = parseJSON(matrixStr);
+
+      if (!expr) {
+        jsonOutput.textContent = 'Error: Invalid matrix JSON';
+        renderResult('');
+        return;
+      }
+
+      const op = $('matrixOperation').value;
+
+      payload = {
+        id: 'ui-' + Math.random().toString(36).slice(2),
+        op,
+        expr,
+        want: ['LaTeX', 'MathJSON', 'Text']
+      };
+    }
+
+    // Show loading state
+    jsonOutput.textContent = 'Request:\n' + JSON.stringify(payload, null, 2) + '\n\nSending request...';
+    renderResult('');
+
+    try {
+      const response = await fetch('http://localhost:8000/cas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      jsonOutput.textContent = 'Request:\n' + JSON.stringify(payload, null, 2) + '\n\nResponse:\n' + JSON.stringify(data, null, 2);
+
+      if (data.result && data.result.latex) {
+        renderResult(data.result.latex);
+      } else {
+        renderResult('');
+      }
+    } catch (e) {
+      jsonOutput.textContent = 'Error: ' + e.message + '\n\nMake sure the CAS service is running at http://localhost:8000';
+      renderResult('');
+    }
+  });
+
+  // Clear
+  $('clearBtn').addEventListener('click', () => {
+    mathField.value = '';
+    resultOutput.innerHTML = '<span style="color:#999">Results will appear here...</span>';
+    resultOutput.classList.add('empty');
+    jsonOutput.textContent = 'Click "Run Operation" to see the API response...';
+  });
+
+  // Quick examples on operation change
+  $('operation').addEventListener('change', (e) => {
+    const examples = {
+      'differentiate': '\\sin(x)',
+      'integrate': 'x^2',
+      'simplify': '(x+1)^2-1',
+      'expand': '(x+1)^3',
+      'factor': 'x^2+2x+1',
+      'limit': '\\frac{\\sin(x)}{x}',
+      'series': 'e^x',
+      'solve': 'x^2-4'
+    };
+
+    const assumptions = {
+      'limit': '{"point":0,"direction":"two-sided"}',
+      'series': '{"point":0,"order":5}',
+      'integrate': '{"bounds":[0,1]}'
+    };
+
+    if (examples[e.target.value]) {
+      mathField.value = examples[e.target.value];
+    }
+
+    if (assumptions[e.target.value]) {
+      $('assumptions').value = assumptions[e.target.value];
+    } else {
+      $('assumptions').value = '';
+    }
+  });
 });
 </script>
-</body></html>
+</body>
+</html>
