@@ -1,0 +1,13 @@
+{
+  "name": "simplify_expand_equivalence",
+  "request": {
+    "id": "g-004",
+    "op": "expand",
+    "expr": ["Power", ["Add", "x", 1], 3],
+    "vars": ["x"],
+    "want": ["LaTeX"]
+  },
+  "expected": {
+    "latex": "x^{3}+3 x^{2}+3 x+1"
+  }
+}

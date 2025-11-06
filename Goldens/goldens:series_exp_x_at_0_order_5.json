@@ -1,0 +1,14 @@
+{
+  "name": "series_exp_x_at_0_order_5",
+  "request": {
+    "id": "g-008",
+    "op": "series",
+    "expr": ["Exp", "x"],
+    "vars": ["x"],
+    "assumptions": { "around": 0, "order": 5 },
+    "want": ["LaTeX"]
+  },
+  "expected": {
+    "latex": "1+x+\\frac{x^{2}}{2}+\\frac{x^{3}}{6}+\\frac{x^{4}}{24}+\\mathcal{O}\\left(x^{5}\\right)"
+  }
+}

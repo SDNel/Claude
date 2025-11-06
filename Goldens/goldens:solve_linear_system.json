@@ -1,0 +1,12 @@
+{
+  "name": "solve_linear_system",
+  "request": {
+    "id": "g-006",
+    "op": "linsolve",
+    "expr": { "A": [[2, 1], [1, 3]], "b": [1, 0] },
+    "want": ["Text", "MathJSON"]
+  },
+  "expected": {
+    "text": "x=3/5, y=-1/5"
+  }
+}

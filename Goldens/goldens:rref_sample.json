@@ -1,0 +1,12 @@
+{
+  "name": "rref_sample",
+  "request": {
+    "id": "g-010",
+    "op": "rref",
+    "expr": [[1, 2, 3], [0, 1, 4], [5, 6, 0]],
+    "want": ["Text"]
+  },
+  "expected": {
+    "text": "rank=3"
+  }
+}

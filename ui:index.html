@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CAS Bridge Test UI</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<style>
+ body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f6f7fb}
+ header{background:#111827;color:#fff;padding:14px 20px;font-weight:600}
+ main{max-width:1200px;margin:0 auto;padding:16px}
+ .card{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:16px;margin:12px 0}
+ label{font-weight:600;margin-top:10px;display:block}
+ input,textarea,select{width:100%;border:1px solid #d1d5db;border-radius:8px;padding:8px;margin-top:6px}
+ .row{display:flex;gap:16px}
+ .col{flex:1}
+ .btn{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}
+ .btn.secondary{background:#6b7280}
+ pre{background:#0b1020;color:#cbd5e1;padding:12px;border-radius:8px;overflow:auto}
+ .math{background:#fff;border:1px solid #e5e7eb;border-radius:8px;min-height:48px;padding:12px}
+ .note{font-size:12px;color:#6b7280}
+</style>
+</head>
+<body>
+<header>CAS Bridge Test UI</header>
+<main>
+ <div class="card">
+  <div class="row">
+    <div class="col">
+      <label>CAS Service URL</label>
+      <input id="serviceUrl" value="http://localhost:8000/cas"/>
+    </div>
+    <div class="col">
+      <label>Operation</label>
+      <select id="op">
+        <option>simplify</option><option>expand</option><option>factor</option>
+        <option>differentiate</option><option>integrate</option><option>limit</option>
+        <option>series</option><option>solve</option><option>linsolve</option>
+        <option>rref</option><option>eigen</option><option>steps</option>
+      </select>
+    </div>
+  </div>
+
+  <label>Expression (MathLive)</label>
+  <math-field id="expr" style="display:block;border:1px solid #d1d5db;border-radius:8px;padding:8px;background:#fff">\\int x^2\\,dx</math-field>
+
+  <div class="row">
+    <div class="col">
+      <label>Vars (comma separated)</label>
+      <input id="vars" placeholder="e.g., x or x,y"/>
+    </div>
+    <div class="col">
+      <label>Assumptions (JSON)</label>
+      <input id="assump" placeholder='e.g., {"bounds":[0,1]}'/>
+    </div>
+  </div>
+
+  <label>Matrix (JSON for linsolve/rref/eigen)</label>
+  <textarea id="matrix" rows="4" placeholder='[[2,1],[1,3]] or {"A":[[2,1],[1,3]],"b":[1,0]}'></textarea>
+
+  <div class="row" style="margin-top:12px">
+    <button class="btn" id="run">Run</button>
+    <button class="btn secondary" id="clear">Clear</button>
+  </div>
+  <p class="note">For definite integrals, set {"bounds":[a,b]}. For series: {"around":0,"order":5}. For limit: {"point":0,"direction":"two-sided"}.</p>
+ </div>
+
+ <div class="card">
+   <h3>Rendered (KaTeX)</h3>
+   <div id="outLatex" class="math"></div>
+ </div>
+
+ <div class="card">
+   <h3>Raw JSON</h3>
+   <pre id="outJson"></pre>
+ </div>
+</main>
+
+<script type="module">
+import {MathfieldElement} from 'https://unpkg.com/mathlive?module';
+import {ComputeEngine} from 'https://unpkg.com/@cortexjs/compute-engine?module';
+import katex from 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.mjs';
+
+const ce = new ComputeEngine();
+const $ = (id)=>document.getElementById(id);
+const matrixOps = new Set(['linsolve','rref','eigen']);
+
+function latexToMJ(latex){
+  try { return ce.parse(latex).json; } catch(e){ console.warn('parse error', e); return null; }
+}
+function parseJSON(s){ if(!s) return undefined; try{return JSON.parse(s)}catch{ return undefined } }
+function renderLatex(s){ const el=$('outLatex'); if(!s){el.textContent='';return} try{ katex.render(s, el, {throwOnError:false}) } catch{ el.textContent=s } }
+
+$('run').addEventListener('click', async ()=>{
+  const url = $('serviceUrl').value.trim() || 'http://localhost:8000/cas';
+  const op  = $('op').value;
+  const vars = $('vars').value ? $('vars').value.split(',').map(s=>s.trim()).filter(Boolean) : undefined;
+  const assumptions = parseJSON($('assump').value);
+  let expr = null;
+  const m = $('matrix').value.trim();
+  if (m && matrixOps.has(op)) {
+    expr = parseJSON(m);
+  } else {
+    expr = latexToMJ($('expr').getValue());
+  }
+  const payload = { id: 'ui-'+Math.random().toString(36).slice(2), op, expr, vars, assumptions, want: ["LaTeX","MathJSON","Text","Steps"] };
+  $('outJson').textContent = "Request:\\n"+JSON.stringify(payload,null,2)+"\\n\\nResponse: (waiting...)";
+  try{
+    const res = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data = await res.json();
+    $('outJson').textContent = "Request:\\n"+JSON.stringify(payload,null,2)+"\\n\\nResponse:\\n"+JSON.stringify(data,null,2);
+    renderLatex(data?.result?.latex || "");
+  }catch(e){
+    $('outJson').textContent = "Request failed: "+e;
+    renderLatex("");
+  }
+});
+
+$('clear').addEventListener('click', ()=>{ $('outJson').textContent=''; renderLatex(''); });
+</script>
+</body></html>

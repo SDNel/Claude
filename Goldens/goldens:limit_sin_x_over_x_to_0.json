@@ -1,0 +1,14 @@
+{
+  "name": "limit_sin_x_over_x_to_0",
+  "request": {
+    "id": "g-009",
+    "op": "limit",
+    "expr": ["Divide", ["Sin", "x"], "x"],
+    "vars": ["x"],
+    "assumptions": { "point": 0, "direction": "two-sided" },
+    "want": ["Text", "LaTeX"]
+  },
+  "expected": {
+    "text": "1"
+  }
+}

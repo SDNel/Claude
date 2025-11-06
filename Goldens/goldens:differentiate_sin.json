@@ -1,0 +1,13 @@
+{
+  "name": "differentiate_sin",
+  "request": {
+    "id": "g-001",
+    "op": "differentiate",
+    "expr": ["Sin", "x"],
+    "vars": ["x"],
+    "want": ["MathJSON", "LaTeX", "Text"]
+  },
+  "expected": {
+    "latex": "\\cos\\left(x\\right)"
+  }
+}

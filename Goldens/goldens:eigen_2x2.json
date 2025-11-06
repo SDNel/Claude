@@ -1,0 +1,12 @@
+{
+  "name": "eigen_2x2",
+  "request": {
+    "id": "g-007",
+    "op": "eigen",
+    "expr": [[2, 0], [0, 3]],
+    "want": ["Text", "MathJSON"]
+  },
+  "expected": {
+    "text": "eigenvalues: [2, 3]"
+  }
+}
