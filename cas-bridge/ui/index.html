@@ -534,31 +534,20 @@ window.addEventListener('DOMContentLoaded', () => {
     let payload;
 
     if (currentMode === 'expression') {
-      // Get LaTeX from MathLive - try multiple ways
+      // Get LaTeX from MathLive
+      // MathLive stores the value in textContent until fully initialized
       let latex = '';
 
-      // Try getValue() method (MathLive API)
       if (typeof mathField.getValue === 'function') {
         latex = mathField.getValue();
-      }
-      // Try value property
-      else if (mathField.value !== undefined) {
+      } else if (mathField.value !== undefined && mathField.value !== '') {
         latex = mathField.value;
-      }
-      // Try textContent as fallback
-      else if (mathField.textContent) {
+      } else if (mathField.textContent) {
+        // Fallback: extract from textContent and clean it up
         latex = mathField.textContent.trim();
       }
 
-      console.log('MathField methods available:', {
-        hasGetValue: typeof mathField.getValue === 'function',
-        hasValue: mathField.value !== undefined,
-        getValue: typeof mathField.getValue === 'function' ? mathField.getValue() : 'N/A',
-        value: mathField.value,
-        textContent: mathField.textContent
-      });
-
-      console.log('LaTeX retrieved:', latex);
+      console.log('LaTeX input:', latex);
 
       if (!latex || latex.trim() === '') {
         jsonOutput.textContent = 'Error: Please enter a mathematical expression.\n\nDebug info: MathLive field appears empty. Try typing something first.';
