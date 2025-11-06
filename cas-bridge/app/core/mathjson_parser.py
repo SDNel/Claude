@@ -101,14 +101,15 @@ def sympy_to_mathjson(expr: Any) -> Any:
     Returns:
         MathJSON representation (list/dict structure)
     """
-    # Handle numbers
-    if isinstance(expr, (sp.Integer, sp.Rational)):
+    # Handle numbers - be comprehensive about SymPy number types
+    if isinstance(expr, (sp.Integer, sp.Rational, sp.Float, sp.core.numbers.One,
+                         sp.core.numbers.Zero, sp.core.numbers.NegativeOne)):
         if isinstance(expr, sp.Rational) and expr.q != 1:
             return ["Divide", int(expr.p), int(expr.q)]
+        # Convert to Python int or float
+        if isinstance(expr, sp.Float):
+            return float(expr)
         return int(expr)
-
-    if isinstance(expr, sp.Float):
-        return float(expr)
 
     # Handle symbols
     if isinstance(expr, sp.Symbol):
@@ -116,7 +117,15 @@ def sympy_to_mathjson(expr: Any) -> Any:
 
     # Handle matrices
     if isinstance(expr, sp.Matrix):
-        return expr.tolist()
+        # Convert to nested list, ensuring all elements are properly serialized
+        result = []
+        for i in range(expr.rows):
+            row = []
+            for j in range(expr.cols):
+                # Recursively convert each element
+                row.append(sympy_to_mathjson(expr[i, j]))
+            result.append(row)
+        return result
 
     # Handle tuples/lists (e.g., from solve)
     if isinstance(expr, (tuple, list)):
