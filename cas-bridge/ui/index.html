@@ -9,9 +9,11 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
-<!-- MathLive for input - using specific version -->
-<link rel="stylesheet" href="https://unpkg.com/mathlive@0.95.5/dist/mathlive-static.css">
-<script src="https://unpkg.com/mathlive@0.95.5/dist/mathlive.min.js" onload="console.log('MathLive loaded successfully')" onerror="console.error('MathLive failed to load from CDN')"></script>
+<!-- MathLive for input - using latest stable version -->
+<script type="module">
+  import 'https://unpkg.com/mathlive';
+  console.log('MathLive module loaded');
+</script>
 
 <!-- Simple LaTeX to MathJSON converter (inline) -->
 <script>
