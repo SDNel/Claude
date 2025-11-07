@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1a & 1b Research - MathLive & Compute Engine</title>
+
+    <!-- MathLive -->
+    <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+
+    <!-- Compute Engine -->
+    <script type="module">
+      import { ComputeEngine } from "https://cdn.jsdelivr.net/npm/@cortex-js/compute-engine/dist/compute-engine.min.esm.js";
+      window.ce = new ComputeEngine();
+      console.log('Compute Engine loaded');
+      window.researchReady = true;
+    </script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 200px 1fr 150px;
+            gap: 10px;
+            margin: 10px 0;
+            align-items: center;
+        }
+
+        label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        math-field {
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 20px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        .results {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 10px;
+            margin: 5px 0;
+        }
+
+        .label-col {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .test-button {
+            background: #27ae60;
+            margin-right: 10px;
+        }
+
+        .test-button:hover {
+            background: #229954;
+        }
+
+        .clear-button {
+            background: #e74c3c;
+        }
+
+        .clear-button:hover {
+            background: #c0392b;
+        }
+
+        #autoTestResults {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .auto-test-item {
+            border-bottom: 1px solid #ddd;
+            padding: 10px 0;
+        }
+
+        .auto-test-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 Phase 1a & 1b Research Tool</h1>
+    <p>This tool helps us understand exactly what MathJSON Compute Engine produces from LaTeX input.</p>
+
+    <!-- SECTION 1: Manual Testing -->
+    <div class="test-section">
+        <h2>Section 1: Manual LaTeX Testing</h2>
+        <p>Type or use MathLive to enter expressions, then see the LaTeX and MathJSON output.</p>
+
+        <div class="input-row">
+            <label>Enter Math:</label>
+            <math-field id="testInput">\sin(x)</math-field>
+            <button onclick="testExpression()">Test →</button>
+        </div>
+
+        <div id="manualResults" class="results" style="display: none;"></div>
+    </div>
+
+    <!-- SECTION 2: Automated Testing of Common Cases -->
+    <div class="test-section">
+        <h2>Section 2: Automated Testing Suite</h2>
+        <p>Click to test all common high school math expressions automatically.</p>
+
+        <button class="test-button" onclick="runAllTests()">▶ Run All Tests</button>
+        <button class="clear-button" onclick="clearResults()">Clear Results</button>
+
+        <div id="autoTestResults" class="results" style="display: none;"></div>
+    </div>
+
+    <!-- SECTION 3: MathLive Virtual Keyboard Inspector -->
+    <div class="test-section">
+        <h2>Section 3: Virtual Keyboard Inspector</h2>
+        <p>Use the MathLive virtual keyboard below. Click any button and see what it inserts.</p>
+
+        <math-field id="keyboardInspector" virtual-keyboard-mode="onfocus"></math-field>
+
+        <div id="keyboardResults" class="results" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Wait for everything to load
+        window.addEventListener('load', () => {
+            console.log('Page loaded, setting up listeners...');
+
+            // Set up keyboard inspector
+            const inspector = document.getElementById('keyboardInspector');
+            inspector.addEventListener('input', () => {
+                const latex = inspector.getValue();
+                const results = document.getElementById('keyboardResults');
+                results.style.display = 'block';
+
+                try {
+                    const mathJSON = window.ce.parse(latex).json;
+                    results.innerHTML = `<div class="results-grid">
+                        <div class="label-col">LaTeX:</div>
+                        <div>${latex}</div>
+                        <div class="label-col">MathJSON:</div>
+                        <div>${JSON.stringify(mathJSON, null, 2)}</div>
+                    </div>`;
+                } catch (e) {
+                    results.innerHTML = `<div class="results-grid">
+                        <div class="label-col">LaTeX:</div>
+                        <div>${latex}</div>
+                        <div class="label-col">Error:</div>
+                        <div>${e.message}</div>
+                    </div>`;
+                }
+            });
+        });
+
+        function testExpression() {
+            const mf = document.getElementById('testInput');
+            const latex = mf.getValue();
+            const results = document.getElementById('manualResults');
+            results.style.display = 'block';
+
+            try {
+                const expr = window.ce.parse(latex);
+                const mathJSON = expr.json;
+
+                results.innerHTML = `<div class="results-grid">
+                    <div class="label-col">LaTeX Input:</div>
+                    <div>${latex}</div>
+                    <div class="label-col">MathJSON:</div>
+                    <div>${JSON.stringify(mathJSON, null, 2)}</div>
+                    <div class="label-col">Type:</div>
+                    <div>${typeof mathJSON === 'object' && Array.isArray(mathJSON) ? 'Array (Operation)' : typeof mathJSON}</div>
+                    <div class="label-col">Operation:</div>
+                    <div>${Array.isArray(mathJSON) && mathJSON.length > 0 ? mathJSON[0] : 'N/A'}</div>
+                </div>`;
+            } catch (e) {
+                results.innerHTML = `<div class="results-grid">
+                    <div class="label-col">LaTeX Input:</div>
+                    <div>${latex}</div>
+                    <div class="label-col">Error:</div>
+                    <div>${e.message}</div>
+                </div>`;
+            }
+        }
+
+        function runAllTests() {
+            const testCases = [
+                // Basic functions
+                { category: "Trig Functions", latex: "\\sin(x)", desc: "Sine" },
+                { category: "Trig Functions", latex: "\\cos(x)", desc: "Cosine" },
+                { category: "Trig Functions", latex: "\\tan(x)", desc: "Tangent" },
+                { category: "Trig Functions", latex: "\\sin(x)^2", desc: "Sine squared" },
+                { category: "Trig Functions", latex: "\\sin^2(x)", desc: "Sine squared (alt)" },
+
+                // Powers and roots
+                { category: "Powers/Roots", latex: "x^2", desc: "Simple power" },
+                { category: "Powers/Roots", latex: "x^{10}", desc: "Power with braces" },
+                { category: "Powers/Roots", latex: "\\sqrt{x}", desc: "Square root" },
+                { category: "Powers/Roots", latex: "\\sqrt[3]{x}", desc: "Cube root" },
+
+                // Fractions
+                { category: "Fractions", latex: "\\frac{1}{2}", desc: "Simple fraction" },
+                { category: "Fractions", latex: "\\frac{x+1}{x-1}", desc: "Complex fraction" },
+
+                // Integrals - THIS IS CRITICAL
+                { category: "Integrals", latex: "\\int \\sin(x) dx", desc: "Indefinite integral" },
+                { category: "Integrals", latex: "\\int_0^1 \\sin(x) dx", desc: "Definite integral" },
+                { category: "Integrals", latex: "\\int_{a}^{b} f(x) dx", desc: "Definite integral with vars" },
+
+                // Derivatives - CRITICAL
+                { category: "Derivatives", latex: "\\frac{d}{dx} \\sin(x)", desc: "Derivative notation" },
+                { category: "Derivatives", latex: "\\frac{d}{dx}(x^2)", desc: "Derivative with parens" },
+                { category: "Derivatives", latex: "f'(x)", desc: "Prime notation" },
+
+                // Limits - CRITICAL
+                { category: "Limits", latex: "\\lim_{x \\to 0} \\frac{\\sin(x)}{x}", desc: "Limit" },
+                { category: "Limits", latex: "\\lim_{x \\to \\infty} \\frac{1}{x}", desc: "Limit to infinity" },
+
+                // Sums and Products
+                { category: "Sums/Products", latex: "\\sum_{i=1}^{n} i", desc: "Sum" },
+                { category: "Sums/Products", latex: "\\prod_{i=1}^{n} i", desc: "Product" },
+
+                // Absolute value
+                { category: "Other", latex: "|x|", desc: "Absolute value (bars)" },
+                { category: "Other", latex: "\\left|x\\right|", desc: "Absolute value (left/right)" },
+
+                // Logarithms
+                { category: "Logarithms", latex: "\\ln(x)", desc: "Natural log" },
+                { category: "Logarithms", latex: "\\log(x)", desc: "Log" },
+                { category: "Logarithms", latex: "\\log_{10}(x)", desc: "Log base 10" },
+
+                // Exponentials
+                { category: "Exponentials", latex: "e^x", desc: "e to the x" },
+                { category: "Exponentials", latex: "\\exp(x)", desc: "Exponential function" },
+
+                // Special values
+                { category: "Constants", latex: "\\pi", desc: "Pi" },
+                { category: "Constants", latex: "e", desc: "e" },
+                { category: "Constants", latex: "\\infty", desc: "Infinity" },
+
+                // Composed operations - CRITICAL FOR FTC
+                { category: "Composed Ops", latex: "\\frac{d}{dx}\\left(\\int_a^x \\sin(t) dt\\right)", desc: "FTC example" },
+                { category: "Composed Ops", latex: "\\int \\frac{d}{dt} f(t) dt", desc: "Integral of derivative" },
+            ];
+
+            const resultsDiv = document.getElementById('autoTestResults');
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = '<h3>Test Results:</h3>';
+
+            let currentCategory = '';
+
+            testCases.forEach((test, index) => {
+                if (test.category !== currentCategory) {
+                    currentCategory = test.category;
+                    resultsDiv.innerHTML += `<h3 style="margin-top: 20px; color: #667eea;">${currentCategory}</h3>`;
+                }
+
+                try {
+                    const mathJSON = window.ce.parse(test.latex).json;
+                    const operation = Array.isArray(mathJSON) && mathJSON.length > 0 ? mathJSON[0] : 'N/A';
+
+                    resultsDiv.innerHTML += `
+                        <div class="auto-test-item">
+                            <strong>${test.desc}</strong>
+                            <div class="results-grid" style="margin-top: 5px; font-size: 12px;">
+                                <div class="label-col">LaTeX:</div>
+                                <div><code>${test.latex}</code></div>
+                                <div class="label-col">Operation:</div>
+                                <div><strong style="color: #e74c3c;">${operation}</strong></div>
+                                <div class="label-col">Full MathJSON:</div>
+                                <div><pre>${JSON.stringify(mathJSON, null, 2)}</pre></div>
+                            </div>
+                        </div>
+                    `;
+                } catch (e) {
+                    resultsDiv.innerHTML += `
+                        <div class="auto-test-item">
+                            <strong>${test.desc}</strong>
+                            <div style="color: red; margin-top: 5px;">Error: ${e.message}</div>
+                        </div>
+                    `;
+                }
+            });
+
+            resultsDiv.innerHTML += '<h3 style="margin-top: 30px; color: #27ae60;">✅ Testing Complete!</h3>';
+        }
+
+        function clearResults() {
+            document.getElementById('autoTestResults').innerHTML = '';
+            document.getElementById('autoTestResults').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
