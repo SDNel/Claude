@@ -243,10 +243,9 @@
     <div id="expressionMode">
       <div class="input-group">
         <label>Enter Mathematical Expression</label>
-        <math-field id="mathInput" virtual-keyboard-mode="onfocus">
-          \sin(x)
+        <math-field id="mathInput">
         </math-field>
-        <p class="help-text">Click the field to show the keyboard. Use keyboard or type directly. Try: x^2, \sin(x), \frac{a}{b}, \int, etc.</p>
+        <p class="help-text">Click the field to edit. Type math directly or use the virtual keyboard. Try: x^2, \sin(x), \frac{a}{b}, \int, etc.</p>
       </div>
 
       <div class="row">
@@ -329,27 +328,23 @@ window.addEventListener('load', () => {
   // Configure MathLive math-field
   if (mathField) {
     console.log('MathField element found:', mathField);
-    console.log('MathField tagName:', mathField.tagName);
     console.log('MathLive loaded?', typeof window.MathfieldElement !== 'undefined');
 
-    // Configure the mathfield
-    mathField.mathVirtualKeyboardPolicy = 'manual';
+    // Set initial value
+    if (typeof mathField.setValue === 'function') {
+      mathField.setValue('\\sin(x)');
+      console.log('Initial value set to \\sin(x)');
+    }
 
-    // Add click handler to show virtual keyboard
-    mathField.addEventListener('click', () => {
-      console.log('Math field clicked');
-      if (window.mathVirtualKeyboard) {
-        window.mathVirtualKeyboard.show();
-      }
-    });
+    // Configure the mathfield to be editable
+    mathField.readOnly = false;
 
-    // Add focus handler
-    mathField.addEventListener('focus', () => {
-      console.log('Math field focused');
-      if (window.mathVirtualKeyboard) {
-        window.mathVirtualKeyboard.show();
-      }
-    });
+    // Set virtual keyboard mode - 'auto' shows keyboard on mobile, allows typing on desktop
+    mathField.mathVirtualKeyboardPolicy = 'auto';
+
+    console.log('MathField configured - should now be editable');
+    console.log('ReadOnly:', mathField.readOnly);
+    console.log('getValue:', mathField.getValue ? mathField.getValue() : 'N/A');
   } else {
     console.error('MathField element NOT found!');
   }
