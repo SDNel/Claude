@@ -221,9 +221,6 @@
 </head>
 
 <body>
-<!-- Virtual keyboard container for MathLive -->
-<div id="virtual-keyboard-container"></div>
-
 <header>
   <h1>🧮 CAS Bridge</h1>
   <p>Computer Algebra System with Visual Math Input</p>
@@ -243,9 +240,9 @@
     <div id="expressionMode">
       <div class="input-group">
         <label>Enter Mathematical Expression</label>
-        <math-field id="mathInput">
+        <math-field id="mathInput" virtual-keyboard-mode="off">
         </math-field>
-        <p class="help-text">Click the field to edit. Type math directly or use the virtual keyboard. Try: x^2, \sin(x), \frac{a}{b}, \int, etc.</p>
+        <p class="help-text">Click the field to edit. Type math directly using your keyboard. Try: x^2, \sin(x), \frac{a}{b}, \int, etc.</p>
       </div>
 
       <div class="row">
@@ -327,7 +324,7 @@ window.addEventListener('load', () => {
 
   // Configure MathLive math-field
   if (mathField) {
-    console.log('MathField element found:', mathField);
+    console.log('MathField element found');
     console.log('MathLive loaded?', typeof window.MathfieldElement !== 'undefined');
 
     // Set initial value
@@ -336,15 +333,12 @@ window.addEventListener('load', () => {
       console.log('Initial value set to \\sin(x)');
     }
 
-    // Configure the mathfield to be editable
+    // Ensure it's editable
     mathField.readOnly = false;
 
-    // Set virtual keyboard mode - 'auto' shows keyboard on mobile, allows typing on desktop
-    mathField.mathVirtualKeyboardPolicy = 'auto';
-
-    console.log('MathField configured - should now be editable');
+    console.log('MathField configured');
     console.log('ReadOnly:', mathField.readOnly);
-    console.log('getValue:', mathField.getValue ? mathField.getValue() : 'N/A');
+    console.log('Current value:', mathField.getValue ? mathField.getValue() : 'N/A');
   } else {
     console.error('MathField element NOT found!');
   }
