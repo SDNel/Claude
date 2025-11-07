@@ -321,36 +321,53 @@ def _handle_derivative_operation(args: list) -> Any:
     """
     Handle Derivative operation (symbolic derivative operator).
 
-    Format: ["Derivative", func]
-    This represents the derivative operator applied to a function.
+    Format: ["Derivative", expr]
+    This represents the derivative of an expression.
 
-    Note: This is the symbolic operator, not the computational D function.
-    When encountered, we treat it as marking a function for differentiation.
+    Two cases:
+    1. ["Derivative", "Sin"] - function name for use in Apply operation
+    2. ["Derivative", ["Add", ...]] - composite expression to differentiate
     """
     if len(args) < 1:
         raise ValueError("Derivative operation requires at least 1 argument")
 
-    # Convert the function name to a SymPy function
-    func_name = args[0]
-    if isinstance(func_name, str):
+    expr_arg = args[0]
+
+    # Case 1: Simple function name (for Apply operations like sin'(x))
+    if isinstance(expr_arg, str):
         # Return a derivative placeholder that will be handled by Apply
-        # We'll just return the SymPy diff-ready function
-        if func_name == "Sin":
+        if expr_arg == "Sin":
             return sp.sin
-        elif func_name == "Cos":
+        elif expr_arg == "Cos":
             return sp.cos
-        elif func_name == "Tan":
+        elif expr_arg == "Tan":
             return sp.tan
-        elif func_name == "Exp":
+        elif expr_arg == "Exp":
             return sp.exp
-        elif func_name == "Ln":
+        elif expr_arg == "Ln":
             return sp.log
         else:
             # For unknown functions, return a symbol representing the derivative
-            return sp.Function(f"{func_name}_prime")
+            return sp.Function(f"{expr_arg}_prime")
 
-    # If it's already an expression, return it
-    return mathjson_to_sympy(func_name)
+    # Case 2: Composite expression - need to differentiate it
+    # Examples: (cos(x)+sin(x))' or (x^2+x)'
+    expr = mathjson_to_sympy(expr_arg)
+
+    # Infer the variable to differentiate with respect to
+    free_symbols = expr.free_symbols
+    if len(free_symbols) == 1:
+        # Single variable - clear what to differentiate
+        var = list(free_symbols)[0]
+        return sp.diff(expr, var)
+    elif len(free_symbols) == 0:
+        # Constant - derivative is 0
+        return sp.Integer(0)
+    else:
+        # Multiple variables - differentiate with respect to first alphabetically
+        # This is a reasonable default (usually 'x' comes before 'y', etc.)
+        var = sorted(free_symbols, key=str)[0]
+        return sp.diff(expr, var)
 
 
 def _handle_apply_operation(args: list) -> Any:
