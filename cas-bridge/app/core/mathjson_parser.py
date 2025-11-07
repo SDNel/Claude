@@ -93,6 +93,7 @@ def mathjson_to_sympy(mathjson: Any) -> Any:
             # Calculus - COMPUTE ENGINE OPERATIONS
             "D": lambda args: _handle_d_operation(args),  # Derivative
             "ND": lambda args: _handle_nd_operation(args),  # Numerical derivative
+            "Derivative": lambda args: _handle_derivative_operation(args),  # Symbolic derivative
             "Integrate": lambda args: _handle_integrate_operation(args),  # Integration
             "Limit": lambda args: _handle_limit_operation(args),  # Limit
             "Limits": lambda args: _handle_limits_structure(args),  # Bounds structure
@@ -103,6 +104,8 @@ def mathjson_to_sympy(mathjson: Any) -> Any:
             "Tuple": lambda args: tuple(mathjson_to_sympy(arg) for arg in args),
             "List": lambda args: [mathjson_to_sympy(arg) for arg in args],
             "Sequence": lambda args: [mathjson_to_sympy(arg) for arg in args],
+            "Apply": lambda args: _handle_apply_operation(args),  # Function application
+            "Prime": lambda args: _handle_prime_notation(args),  # Prime notation marker
 
             # Other
             "Abs": lambda args: sp.Abs(mathjson_to_sympy(args[0])),
@@ -302,6 +305,141 @@ def _handle_block_structure(args: list) -> Any:
         raise ValueError("Block structure requires at least 1 argument")
 
     return mathjson_to_sympy(args[0])
+
+
+def _handle_derivative_operation(args: list) -> Any:
+    """
+    Handle Derivative operation (symbolic derivative operator).
+
+    Format: ["Derivative", func]
+    This represents the derivative operator applied to a function.
+
+    Note: This is the symbolic operator, not the computational D function.
+    When encountered, we treat it as marking a function for differentiation.
+    """
+    if len(args) < 1:
+        raise ValueError("Derivative operation requires at least 1 argument")
+
+    # Convert the function name to a SymPy function
+    func_name = args[0]
+    if isinstance(func_name, str):
+        # Return a derivative placeholder that will be handled by Apply
+        # We'll just return the SymPy diff-ready function
+        if func_name == "Sin":
+            return sp.sin
+        elif func_name == "Cos":
+            return sp.cos
+        elif func_name == "Tan":
+            return sp.tan
+        elif func_name == "Exp":
+            return sp.exp
+        elif func_name == "Ln":
+            return sp.log
+        else:
+            # For unknown functions, return a symbol representing the derivative
+            return sp.Function(f"{func_name}_prime")
+
+    # If it's already an expression, return it
+    return mathjson_to_sympy(func_name)
+
+
+def _handle_apply_operation(args: list) -> Any:
+    """
+    Handle Apply operation from Compute Engine.
+
+    This is the KEY operation for sin'(x) notation!
+
+    Format: ["Apply", function, argument]
+    Example: ["Apply", ["Derivative", "Sin"], "x"] -> derivative of sin(x) w.r.t. x
+
+    When the function is ["Derivative", "Sin"], this means:
+    "Apply the derivative of Sin to x" which means d/dx[sin(x)]
+    """
+    if len(args) < 2:
+        raise ValueError("Apply operation requires at least 2 arguments: function and argument")
+
+    func = args[0]
+    argument = mathjson_to_sympy(args[1])
+
+    # Check if this is a derivative application
+    if isinstance(func, list) and len(func) >= 2 and func[0] == "Derivative":
+        # This is ["Derivative", "Sin"] or similar
+        func_name = func[1]
+
+        # Get the actual function
+        if func_name == "Sin":
+            base_func = sp.sin(argument)
+        elif func_name == "Cos":
+            base_func = sp.cos(argument)
+        elif func_name == "Tan":
+            base_func = sp.tan(argument)
+        elif func_name == "Exp":
+            base_func = sp.exp(argument)
+        elif func_name == "Ln":
+            base_func = sp.log(argument)
+        elif func_name == "Sqrt":
+            base_func = sp.sqrt(argument)
+        elif func_name == "ArcSin" or func_name == "Arcsin":
+            base_func = sp.asin(argument)
+        elif func_name == "ArcCos" or func_name == "Arccos":
+            base_func = sp.acos(argument)
+        elif func_name == "ArcTan" or func_name == "Arctan":
+            base_func = sp.atan(argument)
+        else:
+            # Unknown function - create a generic function
+            base_func = sp.Function(func_name)(argument)
+
+        # Compute the derivative with respect to the argument
+        # Assume argument is the variable
+        if isinstance(argument, sp.Symbol):
+            return sp.diff(base_func, argument)
+        else:
+            # Argument might be a more complex expression
+            # Get all symbols and differentiate w.r.t. first one
+            free_vars = base_func.free_symbols
+            if len(free_vars) == 1:
+                var = list(free_vars)[0]
+                return sp.diff(base_func, var)
+            else:
+                # Multiple variables - can't auto-determine which one
+                raise ValueError("Cannot determine differentiation variable - multiple variables found")
+
+    # Not a derivative - just apply the function
+    # This handles regular function application
+    if isinstance(func, list):
+        func_obj = mathjson_to_sympy(func)
+        if callable(func_obj):
+            return func_obj(argument)
+        return func_obj
+
+    # Function is a string - convert to SymPy function
+    func_obj = mathjson_to_sympy(func)
+    if callable(func_obj):
+        return func_obj(argument)
+    return func_obj
+
+
+def _handle_prime_notation(args: list) -> Any:
+    """
+    Handle Prime notation marker.
+
+    Format: ["Prime", "f"] or ["Prime", "f", n]
+    where n is the order (1 for single prime, 2 for double prime)
+
+    This is used in structures like:
+    ["Tuple", ["Prime", "f"], "x"] which means f'(x)
+
+    For now, we just return a symbol representing the derivative.
+    """
+    if len(args) < 1:
+        raise ValueError("Prime notation requires at least 1 argument")
+
+    func_name = args[0]
+    order = args[1] if len(args) > 1 else 1
+
+    # Return a symbol representing the derivative
+    prime_suffix = "'" * order if isinstance(order, int) else "'"
+    return sp.Symbol(f"{func_name}{prime_suffix}")
 
 
 def sympy_to_mathjson(expr: Any) -> Any:

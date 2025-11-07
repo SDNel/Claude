@@ -69,6 +69,9 @@ ALLOWED_OPERATIONS: Set[str] = {
     "Tuple",       # Multiple return values
     "List",        # Array/list structure
     "Sequence",    # Sequence of expressions
+    "Apply",       # Function application (used for derivatives like sin'(x))
+    "Prime",       # Prime notation marker
+    "PartialDerivative",  # Partial derivative symbol
     # Comparison
     "Equal",
     "Greater",
