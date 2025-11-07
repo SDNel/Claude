@@ -316,12 +316,23 @@
 </main>
 
 <script>
-// Wait for MathLive and Compute Engine to load
-window.addEventListener('DOMContentLoaded', () => {
+// Wait for MathLive to fully load
+window.addEventListener('load', () => {
   const $ = (id) => document.getElementById(id);
   const mathField = $('mathInput');
   const resultOutput = $('resultOutput');
   const jsonOutput = $('jsonOutput');
+
+  // Configure MathLive math-field
+  if (mathField) {
+    // Make sure it's editable
+    mathField.readOnly = false;
+    // Configure virtual keyboard
+    mathField.setOptions({
+      virtualKeyboardMode: 'onfocus',
+      virtualKeyboards: 'all'
+    });
+  }
 
   let currentMode = 'expression';
 
