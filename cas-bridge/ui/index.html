@@ -9,11 +9,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
-<!-- MathLive for input - using latest stable version -->
-<script type="module">
-  import 'https://unpkg.com/mathlive';
-  console.log('MathLive module loaded');
-</script>
+<!-- MathLive for input - using jsdelivr CDN (latest version) -->
+<script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
 
 <!-- Simple LaTeX to MathJSON converter (inline) -->
 <script>
@@ -242,9 +239,8 @@
     <div id="expressionMode">
       <div class="input-group">
         <label>Enter Mathematical Expression</label>
-        <math-field id="mathInput" virtual-keyboard-mode="off">
-        </math-field>
-        <p class="help-text">Click the field to edit. Type math directly using your keyboard. Try: x^2, \sin(x), \frac{a}{b}, \int, etc.</p>
+        <math-field id="mathInput">\sin(x)</math-field>
+        <p class="help-text">Click to edit. The virtual keyboard will appear automatically. Try typing x^2, sin, frac, sqrt, etc.</p>
       </div>
 
       <div class="row">
@@ -324,26 +320,8 @@ window.addEventListener('load', () => {
   const resultOutput = $('resultOutput');
   const jsonOutput = $('jsonOutput');
 
-  // Configure MathLive math-field
-  if (mathField) {
-    console.log('MathField element found');
-    console.log('MathLive loaded?', typeof window.MathfieldElement !== 'undefined');
-
-    // Set initial value
-    if (typeof mathField.setValue === 'function') {
-      mathField.setValue('\\sin(x)');
-      console.log('Initial value set to \\sin(x)');
-    }
-
-    // Ensure it's editable
-    mathField.readOnly = false;
-
-    console.log('MathField configured');
-    console.log('ReadOnly:', mathField.readOnly);
-    console.log('Current value:', mathField.getValue ? mathField.getValue() : 'N/A');
-  } else {
-    console.error('MathField element NOT found!');
-  }
+  // MathField is automatically initialized by MathLive
+  // No additional configuration needed - it just works!
 
   let currentMode = 'expression';
 
@@ -556,28 +534,16 @@ window.addEventListener('load', () => {
     let payload;
 
     if (currentMode === 'expression') {
-      // Get LaTeX from MathLive
-      // MathLive stores the value in textContent until fully initialized
-      let latex = '';
-
-      if (typeof mathField.getValue === 'function') {
-        latex = mathField.getValue();
-      } else if (mathField.value !== undefined && mathField.value !== '') {
-        latex = mathField.value;
-      } else if (mathField.textContent) {
-        // Fallback: extract from textContent and clean it up
-        latex = mathField.textContent.trim();
-      }
+      // Get LaTeX from MathLive using the standard getValue() method
+      const latex = mathField.getValue();
 
       console.log('LaTeX input:', latex);
 
       if (!latex || latex.trim() === '') {
-        jsonOutput.textContent = 'Error: Please enter a mathematical expression.\n\nDebug info: MathLive field appears empty. Try typing something first.';
+        jsonOutput.textContent = 'Error: Please enter a mathematical expression.';
         renderResult('');
         return;
       }
-
-      console.log('LaTeX input:', latex);
 
       // Convert to MathJSON
       const expr = latexToMathJSON(latex);
@@ -650,11 +616,7 @@ window.addEventListener('load', () => {
 
   // Clear
   $('clearBtn').addEventListener('click', () => {
-    if (mathField.setValue) {
-      mathField.setValue('');
-    } else {
-      mathField.value = '';
-    }
+    mathField.setValue('');
     resultOutput.innerHTML = '<span style="color:#999">Results will appear here...</span>';
     resultOutput.classList.add('empty');
     jsonOutput.textContent = 'Click "Run Operation" to see the API response...';
@@ -680,11 +642,7 @@ window.addEventListener('load', () => {
     };
 
     if (examples[e.target.value]) {
-      if (mathField.setValue) {
-        mathField.setValue(examples[e.target.value]);
-      } else {
-        mathField.value = examples[e.target.value];
-      }
+      mathField.setValue(examples[e.target.value]);
     }
 
     if (assumptions[e.target.value]) {
