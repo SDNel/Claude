@@ -221,6 +221,9 @@
 </head>
 
 <body>
+<!-- Virtual keyboard container for MathLive -->
+<div id="virtual-keyboard-container"></div>
+
 <header>
   <h1>🧮 CAS Bridge</h1>
   <p>Computer Algebra System with Visual Math Input</p>
@@ -328,25 +331,24 @@ window.addEventListener('load', () => {
     console.log('MathField element found:', mathField);
     console.log('MathField tagName:', mathField.tagName);
     console.log('MathLive loaded?', typeof window.MathfieldElement !== 'undefined');
-    console.log('Is custom element?', mathField instanceof HTMLElement);
 
-    // Try to check if it's a proper math-field
-    if (mathField.tagName === 'MATH-FIELD') {
-      console.log('Element is math-field');
-      console.log('Available properties:', Object.getOwnPropertyNames(mathField));
-      console.log('getValue exists?', typeof mathField.getValue);
-      console.log('setValue exists?', typeof mathField.setValue);
-    }
+    // Configure the mathfield
+    mathField.mathVirtualKeyboardPolicy = 'manual';
 
-    // Make sure it's editable
-    mathField.readOnly = false;
-    mathField.disabled = false;
-
-    // The virtual keyboard settings are already in the HTML attribute
-    // Just ensure the field is focusable
+    // Add click handler to show virtual keyboard
     mathField.addEventListener('click', () => {
       console.log('Math field clicked');
-      mathField.focus();
+      if (window.mathVirtualKeyboard) {
+        window.mathVirtualKeyboard.show();
+      }
+    });
+
+    // Add focus handler
+    mathField.addEventListener('focus', () => {
+      console.log('Math field focused');
+      if (window.mathVirtualKeyboard) {
+        window.mathVirtualKeyboard.show();
+      }
     });
   } else {
     console.error('MathField element NOT found!');
