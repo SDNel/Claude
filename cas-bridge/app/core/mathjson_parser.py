@@ -201,9 +201,19 @@ def _handle_integrate_operation(args: list) -> Any:
         # ["Limits", var, lower, upper]
         if len(limits_struct) >= 4:
             var = sp.Symbol(limits_struct[1]) if isinstance(limits_struct[1], str) else mathjson_to_sympy(limits_struct[1])
-            lower = mathjson_to_sympy(limits_struct[2])
-            upper = mathjson_to_sympy(limits_struct[3])
-            return sp.integrate(expr, (var, lower, upper))
+            lower_bound = limits_struct[2]
+            upper_bound = limits_struct[3]
+
+            # Check if bounds are "Nothing" (indefinite integral)
+            # MathLive sends "Nothing" for indefinite integrals
+            if lower_bound == "Nothing" or upper_bound == "Nothing":
+                # This is actually an indefinite integral - skip to indefinite case
+                pass
+            else:
+                # Definite integral with actual bounds
+                lower = mathjson_to_sympy(lower_bound)
+                upper = mathjson_to_sympy(upper_bound)
+                return sp.integrate(expr, (var, lower, upper))
 
     # Indefinite integral
     if var is None:
