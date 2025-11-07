@@ -327,10 +327,10 @@ window.addEventListener('load', () => {
   if (mathField) {
     // Make sure it's editable
     mathField.readOnly = false;
-    // Configure virtual keyboard
-    mathField.setOptions({
-      virtualKeyboardMode: 'onfocus',
-      virtualKeyboards: 'all'
+    // The virtual keyboard settings are already in the HTML attribute
+    // Just ensure the field is focusable
+    mathField.addEventListener('click', () => {
+      mathField.focus();
     });
   }
 
