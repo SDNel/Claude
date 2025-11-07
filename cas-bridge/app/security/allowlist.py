@@ -6,6 +6,7 @@ from app.config import settings
 
 # Allow-listed MathJSON operations
 # CRITICAL: This is the security boundary - only these operations are allowed
+# Updated 2025-11-07: Added Compute Engine operations from Phase 1b research
 ALLOWED_OPERATIONS: Set[str] = {
     # Arithmetic
     "Add",
@@ -17,6 +18,7 @@ ALLOWED_OPERATIONS: Set[str] = {
     "Power",
     "Sqrt",
     "Root",
+    "Rational",  # Compute Engine uses this for fractions
     # Trigonometric
     "Sin",
     "Cos",
@@ -27,10 +29,23 @@ ALLOWED_OPERATIONS: Set[str] = {
     "Arcsin",
     "Arccos",
     "Arctan",
+    "ArcSin",  # Compute Engine capital versions
+    "ArcCos",
+    "ArcTan",
     # Hyperbolic
     "Sinh",
     "Cosh",
     "Tanh",
+    "Sech",
+    "Csch",
+    "Coth",
+    # Inverse Hyperbolic
+    "Arcsinh",
+    "Arccosh",
+    "Arctanh",
+    "ArcSinh",
+    "ArcCosh",
+    "ArcTanh",
     # Exponential & Logarithmic
     "Exp",
     "Log",
@@ -40,19 +55,36 @@ ALLOWED_OPERATIONS: Set[str] = {
     "Abs",
     "Factorial",
     "Gamma",
-    # Calculus
-    "Derivative",
-    "Integral",
+    # Calculus - COMPUTE ENGINE OPERATIONS
+    "D",           # Primary derivative operation (computes derivatives)
+    "ND",          # Numerical derivative approximation
+    "Derivative",  # Symbolic derivative (representation only)
+    "Integrate",   # Integration operation (Compute Engine name)
+    "Integral",    # Old name (keep for backward compatibility)
+    "Limit",       # Limit operation
+    "Limits",      # Bounds structure for definite integrals/limits
+    # Structural Operations (Compute Engine)
+    "Function",    # Function definition structure
+    "Block",       # Code block structure
+    "Tuple",       # Multiple return values
+    "List",        # Array/list structure
+    "Sequence",    # Sequence of expressions
     # Comparison
     "Equal",
     "Greater",
     "Less",
     "GreaterEqual",
     "LessEqual",
+    "NotEqual",
     # Logical
     "And",
     "Or",
     "Not",
+    # Constants (sometimes appear as operations)
+    "Pi",
+    "E",
+    "Infinity",
+    "NegativeInfinity",
 }
 
 

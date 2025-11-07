@@ -21,6 +21,7 @@ class CasOperation(str, Enum):
     RREF = "rref"
     EIGEN = "eigen"
     STEPS = "steps"
+    EVALUATE = "evaluate"  # Added 2025-11-07: For self-contained calculus expressions
 
 
 class OutputFormat(str, Enum):

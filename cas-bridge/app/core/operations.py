@@ -57,6 +57,8 @@ async def execute_operation(request: CasRequest, include_steps: bool = False) ->
         result_expr = _rref(sympy_expr)
     elif request.op.value == "eigen":
         result_expr = _eigen(sympy_expr)
+    elif request.op.value == "evaluate":
+        result_expr = _evaluate(sympy_expr)
     else:
         raise ValueError(f"Unsupported operation: {request.op}")
 
@@ -246,6 +248,31 @@ def _eigen(expr: Any) -> Any:
             result.append(val)
 
     return result
+
+
+def _evaluate(expr: Any) -> Any:
+    """
+    Evaluate a self-contained expression.
+
+    Added 2025-11-07 to support self-contained calculus expressions from Compute Engine.
+
+    This operation doesn't apply any external operation - it evaluates the expression
+    as-is. This is useful when the MathJSON already contains operations like D, Integrate,
+    or Limit that were parsed from MathLive input.
+
+    Examples:
+        ["D", ["Sin", "x"], "x"] -> cos(x)
+        ["Integrate", ...] -> evaluated integral
+        ["Limit", ...] -> evaluated limit
+
+    The expression has already been converted to SymPy by mathjson_to_sympy(),
+    which handles D, Integrate, Limit, etc. and returns the computed result.
+    So we just need to simplify/evaluate it.
+    """
+    # The mathjson_to_sympy conversion already handled the operations
+    # (D -> sp.diff, Integrate -> sp.integrate, etc.)
+    # Now we just simplify the result
+    return sp.simplify(expr)
 
 
 # Output formatters

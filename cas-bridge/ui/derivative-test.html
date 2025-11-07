@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Derivative Notation Test</title>
+
+    <!-- MathLive -->
+    <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+
+    <!-- Compute Engine -->
+    <script type="module">
+      import { ComputeEngine } from "https://cdn.jsdelivr.net/npm/@cortex-js/compute-engine/dist/compute-engine.min.esm.js";
+      window.ce = new ComputeEngine();
+      console.log('Compute Engine loaded');
+      window.testReady = true;
+    </script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #e74c3c;
+            padding-bottom: 10px;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .test-item {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+        }
+
+        .test-item:last-child {
+            border-bottom: none;
+        }
+
+        .notation-desc {
+            font-weight: bold;
+            color: #e74c3c;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .latex-code {
+            font-family: 'Courier New', monospace;
+            background: #f9f9f9;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .result-box {
+            background: #f0f8ff;
+            border-left: 4px solid #3498db;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .success {
+            border-left-color: #27ae60;
+            background: #e8f8f5;
+        }
+
+        .error {
+            border-left-color: #e74c3c;
+            background: #fde8e8;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #c0392b;
+        }
+
+        .key-finding {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .key-finding h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 Derivative Notation Test</h1>
+    <p><strong>Purpose:</strong> Test different ways to enter derivatives in MathLive and see what MathJSON they produce.</p>
+
+    <div class="key-finding">
+        <h3>⚠️ Key Issue Discovered</h3>
+        <p>The test results showed that <code>\frac{d}{dx}</code> notation is parsed as literal division (d ÷ (d×x)), NOT as a derivative operator!</p>
+        <p><strong>This test will determine:</strong> What notation DOES work for derivatives?</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test: Different Derivative Notations</h2>
+        <p>Click the button to test all common ways to write derivatives:</p>
+
+        <button onclick="runDerivativeTests()">▶ Run All Derivative Tests</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const derivativeTests = [
+            {
+                desc: "Prime notation (Lagrange)",
+                latex: "f'(x)",
+                expectedOp: "Derivative or D with prime"
+            },
+            {
+                desc: "Prime notation with explicit \\prime",
+                latex: "f^{\\prime}(x)",
+                expectedOp: "Derivative or D"
+            },
+            {
+                desc: "Double prime (second derivative)",
+                latex: "f''(x)",
+                expectedOp: "Second derivative"
+            },
+            {
+                desc: "Prime on sin function",
+                latex: "\\sin'(x)",
+                expectedOp: "Derivative of sin"
+            },
+            {
+                desc: "Leibniz notation with \\frac{d}{dx}",
+                latex: "\\frac{d}{dx} \\sin(x)",
+                expectedOp: "Should be derivative, but likely parsed as division"
+            },
+            {
+                desc: "Leibniz with parentheses",
+                latex: "\\frac{d}{dx}(\\sin(x))",
+                expectedOp: "Derivative (but probably division)"
+            },
+            {
+                desc: "Leibniz with brackets",
+                latex: "\\frac{d}{dx}[\\sin(x)]",
+                expectedOp: "Derivative (but probably division)"
+            },
+            {
+                desc: "Partial derivative ∂",
+                latex: "\\frac{\\partial}{\\partial x} f(x,y)",
+                expectedOp: "Partial derivative"
+            },
+            {
+                desc: "Partial derivative with \\partial f",
+                latex: "\\frac{\\partial f}{\\partial x}",
+                expectedOp: "Partial derivative"
+            },
+            {
+                desc: "Newton's dot notation",
+                latex: "\\dot{x}",
+                expectedOp: "Time derivative (rare in high school)"
+            },
+            {
+                desc: "Derivative at a point",
+                latex: "f'(2)",
+                expectedOp: "Evaluate derivative at x=2"
+            },
+            {
+                desc: "dy/dx notation",
+                latex: "\\frac{dy}{dx}",
+                expectedOp: "Derivative of y with respect to x"
+            },
+            {
+                desc: "d²y/dx² (second derivative)",
+                latex: "\\frac{d^2y}{dx^2}",
+                expectedOp: "Second derivative"
+            },
+        ];
+
+        function runDerivativeTests() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h3 style="margin-top: 20px;">Test Results:</h3>';
+
+            derivativeTests.forEach((test, index) => {
+                try {
+                    const mathJSON = window.ce.parse(test.latex).json;
+                    const operation = Array.isArray(mathJSON) && mathJSON.length > 0 ? mathJSON[0] : 'N/A';
+
+                    // Check if it's what we expect
+                    const isDivision = operation === "Divide" || operation === "Multiply";
+                    const isDerivative = operation === "D" || operation === "Derivative" || operation === "ND";
+
+                    const statusClass = isDivision && !test.desc.includes("division") ? 'error' :
+                                       isDerivative ? 'success' : '';
+
+                    resultsDiv.innerHTML += `
+                        <div class="test-item">
+                            <div class="notation-desc">${index + 1}. ${test.desc}</div>
+                            <div class="latex-code">LaTeX: ${test.latex}</div>
+                            <div class="result-box ${statusClass}">
+                                <strong>Operation:</strong> ${operation}
+                                <strong style="display: block; margin-top: 5px;">Expected:</strong> ${test.expectedOp}
+                                <strong style="display: block; margin-top: 5px;">Full MathJSON:</strong>
+${JSON.stringify(mathJSON, null, 2)}
+                            </div>
+                        </div>
+                    `;
+                } catch (e) {
+                    resultsDiv.innerHTML += `
+                        <div class="test-item">
+                            <div class="notation-desc">${index + 1}. ${test.desc}</div>
+                            <div class="latex-code">LaTeX: ${test.latex}</div>
+                            <div class="result-box error">
+                                <strong>Error:</strong> ${e.message}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            resultsDiv.innerHTML += `
+                <div class="key-finding" style="margin-top: 30px;">
+                    <h3>✅ Analysis Complete!</h3>
+                    <p>Review the results above to identify which notation(s) produce proper derivative MathJSON.</p>
+                    <p><strong>Look for:</strong></p>
+                    <ul>
+                        <li>Green boxes: Properly parsed as derivatives (operation = "D", "Derivative", or "ND")</li>
+                        <li>Red boxes: Incorrectly parsed (usually as "Divide" or "Multiply")</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Auto-run on load for convenience
+        window.addEventListener('load', () => {
+            if (window.testReady) {
+                setTimeout(runDerivativeTests, 500);
+            }
+        });
+    </script>
+</body>
+</html>
