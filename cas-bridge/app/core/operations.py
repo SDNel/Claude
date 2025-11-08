@@ -348,15 +348,29 @@ def _assign(mathjson_expr: Any) -> Any:
 
     # Case 1.5: Implicit multiplication parsed as identifier (expr → e*x*p*r)
     # MathLive parses multi-letter identifiers as implicit multiplication
-    # Example: ["Multiply", "e", "x", "p", "r"] should be variable "expr"
+    # Example: ["Multiply", "ExponentialE", "x", "p", "r"] should be variable "expr"
+    # where "ExponentialE" represents the letter "e" (parsed as Euler's constant)
     if (isinstance(lhs_mathjson, list) and len(lhs_mathjson) >= 2 and
         lhs_mathjson[0] in ("Multiply", "InvisibleOperator")):
         args = lhs_mathjson[1:]
 
-        # Check if all args are single-letter strings
-        if all(isinstance(arg, str) and len(arg) == 1 and arg.isalpha() for arg in args):
+        # Map MathJSON constants to their single-letter equivalents
+        # MathLive may parse "e" as "ExponentialE", "i" as "ImaginaryI"
+        CONSTANT_TO_LETTER = {
+            'ExponentialE': 'e',
+            'ImaginaryI': 'i'
+        }
+
+        # Convert args, mapping constants to letters where applicable
+        converted_args = [
+            CONSTANT_TO_LETTER.get(arg, arg) if isinstance(arg, str) else arg
+            for arg in args
+        ]
+
+        # Check if all converted args are single-letter strings
+        if all(isinstance(arg, str) and len(arg) == 1 and arg.isalpha() for arg in converted_args):
             # Concatenate to form variable name
-            variable_name = ''.join(args)
+            variable_name = ''.join(converted_args)
 
             # Verify it's a valid identifier
             if variable_name.isidentifier():

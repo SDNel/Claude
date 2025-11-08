@@ -368,7 +368,8 @@ window.addEventListener('load', () => {
     }
 
     // Case 1.5: Implicit multiplication parsed as identifier → Assignment
-    // MathLive parses "expr" as ["Multiply", "e", "x", "p", "r"]
+    // MathLive parses "expr" as ["Multiply", "ExponentialE", "x", "p", "r"]
+    // where "ExponentialE" represents the letter "e" (parsed as Euler's constant)
     // Detect when this is actually a variable name, not an expression
     if (Array.isArray(lhs) && lhs.length >= 2 &&
         (lhs[0] === 'Multiply' || lhs[0] === 'InvisibleOperator')) {
@@ -377,17 +378,28 @@ window.addEventListener('load', () => {
       console.log('DEBUG Case 1.5: Detected Multiply/InvisibleOperator on lhs');
       console.log('  lhs:', JSON.stringify(lhs));
       console.log('  args:', JSON.stringify(args));
-      console.log('  args check:', args.map(arg => ({
-        value: arg,
-        type: typeof arg,
-        length: typeof arg === 'string' ? arg.length : 'N/A',
-        isAlpha: typeof arg === 'string' && /^[a-zA-Z_]$/.test(arg)
-      })));
 
-      // Check if all args are single-letter strings (single symbols)
-      if (args.every(arg => typeof arg === 'string' && arg.length === 1 && /^[a-zA-Z_]$/.test(arg))) {
+      // Map MathJSON constants to their single-letter equivalents
+      // MathLive may parse "e" as "ExponentialE", "i" as "ImaginaryI"
+      const CONSTANT_TO_LETTER = {
+        'ExponentialE': 'e',
+        'ImaginaryI': 'i'
+      };
+
+      // Convert args, mapping constants to letters where applicable
+      const convertedArgs = args.map(arg => {
+        if (typeof arg === 'string' && CONSTANT_TO_LETTER[arg]) {
+          return CONSTANT_TO_LETTER[arg];
+        }
+        return arg;
+      });
+
+      console.log('  convertedArgs:', convertedArgs);
+
+      // Check if all converted args are single-letter strings (single symbols)
+      if (convertedArgs.every(arg => typeof arg === 'string' && arg.length === 1 && /^[a-zA-Z_]$/.test(arg))) {
         // Concatenate to form potential variable name
-        const varName = args.join('');
+        const varName = convertedArgs.join('');
 
         // Check if it forms a valid identifier
         if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(varName)) {
@@ -399,7 +411,7 @@ window.addEventListener('load', () => {
           };
         }
       } else {
-        console.log('  Case 1.5 check failed - not all single-letter strings');
+        console.log('  Case 1.5 check failed - not all single-letter strings after conversion');
       }
     }
 
