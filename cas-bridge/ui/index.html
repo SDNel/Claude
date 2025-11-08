@@ -289,6 +289,17 @@
     <h2>📋 Response Details</h2>
     <pre id="jsonOutput">Click "Run Operation" to see the API response...</pre>
   </div>
+
+  <!-- Registry Card -->
+  <div class="card">
+    <h2>📊 Session Registry <button id="refreshRegistryBtn" class="btn-secondary" style="float:right; padding:4px 12px; font-size:12px;">🔄 Refresh</button></h2>
+    <div id="registryContent">
+      <p style="color:#999; font-style:italic;">No variables stored yet. Assign a variable to see it here.</p>
+    </div>
+    <div class="btn-group" style="margin-top:12px;">
+      <button class="btn-secondary" id="clearRegistryBtn">Clear All Variables</button>
+    </div>
+  </div>
 </main>
 
 <script>
@@ -831,6 +842,171 @@ window.addEventListener('load', () => {
     resultOutput.classList.add('empty');
     jsonOutput.textContent = 'Click "Run Operation" to see the API response...';
   });
+
+  // Registry Management
+  async function fetchRegistry() {
+    try {
+      const response = await fetch('http://localhost:8000/registry');
+      const data = await response.json();
+      displayRegistry(data);
+    } catch (e) {
+      console.error('Failed to fetch registry:', e);
+      $('registryContent').innerHTML = '<p style="color:#d32f2f;">Failed to load registry. Make sure the CAS service is running.</p>';
+    }
+  }
+
+  function displayRegistry(data) {
+    const container = $('registryContent');
+    const objects = data.objects || {};
+
+    if (Object.keys(objects).length === 0) {
+      container.innerHTML = '<p style="color:#999; font-style:italic;">No variables stored yet. Assign a variable to see it here.</p>';
+      return;
+    }
+
+    // Group by type
+    const byType = {};
+    for (const [name, obj] of Object.entries(objects)) {
+      const type = obj.type;
+      if (!byType[type]) byType[type] = [];
+      byType[type].push({ name, ...obj });
+    }
+
+    // Generate HTML
+    let html = '';
+
+    const typeIcons = {
+      'scalar': '🔢',
+      'expression': '📐',
+      'matrix': '📊',
+      'vector': '➡️',
+      'function': '📈',
+      'operator': '⚡',
+      'unknown': '❓'
+    };
+
+    const typeLabels = {
+      'scalar': 'Scalars',
+      'expression': 'Expressions',
+      'matrix': 'Matrices',
+      'vector': 'Vectors',
+      'function': 'Functions',
+      'operator': 'Operators',
+      'unknown': 'Unknown'
+    };
+
+    for (const [type, items] of Object.entries(byType)) {
+      const icon = typeIcons[type] || '📦';
+      const label = typeLabels[type] || type;
+
+      html += `<div style="margin-bottom:16px;">`;
+      html += `<h3 style="font-size:14px; color:#667eea; margin:8px 0 4px 0;">${icon} ${label} (${items.length})</h3>`;
+
+      for (const item of items) {
+        html += `<div style="background:#f9f9f9; padding:8px; margin:4px 0; border-radius:4px; border-left:3px solid #667eea;">`;
+        html += `<div style="display:flex; justify-content:space-between; align-items:center;">`;
+        html += `<strong style="font-family:monospace;">${item.name}</strong>`;
+        html += `<button class="delete-var-btn" data-name="${item.name}" style="background:#d32f2f; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Delete</button>`;
+        html += `</div>`;
+
+        // Display value using LaTeX if available
+        if (item.latex) {
+          html += `<div style="margin-top:4px; padding:4px; background:white; border-radius:3px; overflow-x:auto;">`;
+          html += `<span id="latex-${item.name}"></span>`;
+          html += `</div>`;
+        }
+
+        // Display metadata
+        if (item.metadata && Object.keys(item.metadata).length > 0) {
+          html += `<div style="font-size:11px; color:#666; margin-top:4px;">`;
+          for (const [key, value] of Object.entries(item.metadata)) {
+            html += `<span style="margin-right:12px;">${key}: ${JSON.stringify(value)}</span>`;
+          }
+          html += `</div>`;
+        }
+
+        html += `</div>`;
+      }
+
+      html += `</div>`;
+    }
+
+    container.innerHTML = html;
+
+    // Render LaTeX for each item
+    for (const [name, obj] of Object.entries(objects)) {
+      if (obj.latex) {
+        const elem = document.getElementById(`latex-${name}`);
+        if (elem) {
+          try {
+            katex.render(obj.latex, elem, { throwOnError: false });
+          } catch (e) {
+            elem.textContent = obj.latex;
+          }
+        }
+      }
+    }
+
+    // Add event listeners to delete buttons
+    document.querySelectorAll('.delete-var-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const varName = btn.dataset.name;
+        if (confirm(`Delete variable '${varName}'?`)) {
+          await deleteVariable(varName);
+        }
+      });
+    });
+  }
+
+  async function deleteVariable(name) {
+    try {
+      const response = await fetch(`http://localhost:8000/registry/${name}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        await fetchRegistry(); // Refresh display
+      } else {
+        alert('Failed to delete variable');
+      }
+    } catch (e) {
+      console.error('Failed to delete variable:', e);
+      alert('Failed to delete variable');
+    }
+  }
+
+  async function clearRegistry() {
+    if (!confirm('Clear all variables? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8000/registry', {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        await fetchRegistry(); // Refresh display
+      } else {
+        alert('Failed to clear registry');
+      }
+    } catch (e) {
+      console.error('Failed to clear registry:', e);
+      alert('Failed to clear registry');
+    }
+  }
+
+  // Event listeners
+  $('refreshRegistryBtn').addEventListener('click', fetchRegistry);
+  $('clearRegistryBtn').addEventListener('click', clearRegistry);
+
+  // Auto-refresh registry after assignment operations
+  const originalRunBtn = $('runBtn');
+  originalRunBtn.addEventListener('click', async () => {
+    // Wait a bit for assignment to complete, then refresh
+    setTimeout(fetchRegistry, 500);
+  });
+
+  // Initial load
+  fetchRegistry();
 
 });
 </script>

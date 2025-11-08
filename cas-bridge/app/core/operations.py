@@ -343,7 +343,7 @@ def _assign(mathjson_expr: Any) -> Any:
     # Case 1: Simple variable assignment (A = value)
     if isinstance(lhs_mathjson, str):
         variable_name = lhs_mathjson
-        assign_variable(variable_name, rhs_sympy)
+        assign_variable(variable_name, rhs_sympy, mathjson=mathjson_expr)
         return rhs_sympy
 
     # Case 2: Function definition (f(x) = expr)
@@ -357,7 +357,7 @@ def _assign(mathjson_expr: Any) -> Any:
 
             # Create Lambda
             func = sp.Lambda(tuple(arg_symbols), rhs_sympy)
-            assign_variable(func_name, func)
+            assign_variable(func_name, func, mathjson=mathjson_expr)
             return rhs_sympy
 
     # Fallback: store as-is

@@ -28,7 +28,13 @@ def mathjson_to_sympy(mathjson: Any) -> Any:
         return sp.sympify(mathjson)
 
     if isinstance(mathjson, str):
-        # Assume it's a symbol
+        # Check if it's a stored variable first
+        from app.core.session import get_variable
+        stored_value = get_variable(mathjson)
+        if stored_value is not None:
+            return stored_value
+
+        # Otherwise, treat as a symbol
         return sp.Symbol(mathjson)
 
     if isinstance(mathjson, list) and len(mathjson) > 0:
