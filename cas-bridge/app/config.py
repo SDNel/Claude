@@ -32,5 +32,8 @@ class Settings(BaseSettings):
     log_format: str = "json"
     redact_expressions: bool = True
 
+    # AI Configuration
+    anthropic_api_key: str = ""  # Loaded from .env
+
 
 settings = Settings()

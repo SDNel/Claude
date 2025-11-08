@@ -1,10 +1,10 @@
 """AI-powered step-by-step solution generation using Anthropic Claude."""
 
-import os
 import json
 from typing import List, Dict, Any
 import anthropic
 from sympy import latex
+from app.config import settings
 
 
 def generate_steps_with_ai(
@@ -34,10 +34,10 @@ def generate_steps_with_ai(
             ...
         ]
     """
-    # Get API key from environment
-    api_key = os.getenv('ANTHROPIC_API_KEY')
+    # Get API key from settings
+    api_key = settings.anthropic_api_key
     if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY not found in environment")
+        raise ValueError("ANTHROPIC_API_KEY not configured in .env file")
 
     # Create Anthropic client
     client = anthropic.Anthropic(api_key=api_key)
