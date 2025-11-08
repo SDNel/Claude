@@ -457,8 +457,21 @@ window.addEventListener('load', () => {
         }
 
         if (variable) {
-          const expr = mathJSON[2];
-          console.log('Fixed derivative pattern 4b: real keyboard d/dx detected');
+          // Extract the expression to differentiate
+          // Could be mathJSON[2] or a combination of mathJSON[2], mathJSON[3], etc.
+          let expr = mathJSON[2];
+
+          // Check if we have a function application pattern: f(x)
+          // The Tuple might be: ["Tuple", ["Divide", ...], "f", "x"]
+          // We need to check if expr is a function name and the next element matches the variable
+          if (typeof expr === 'string' && mathJSON.length >= 4 && mathJSON[3] === variable) {
+            // This is f(x) where f is the function and x is the argument
+            expr = [expr, variable];
+            console.log('Fixed derivative pattern 4b: real keyboard d/dx f(x) detected (reconstructed function application)');
+          } else {
+            console.log('Fixed derivative pattern 4b: real keyboard d/dx detected');
+          }
+
           return ["D", fixDerivativeNotation(expr), variable];
         }
       }
