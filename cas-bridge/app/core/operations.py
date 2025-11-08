@@ -25,44 +25,48 @@ async def execute_operation(request: CasRequest, include_steps: bool = False) ->
     # Validate expression against allow-list
     validate_mathjson(request.expr)
 
-    # Convert MathJSON to SymPy
-    sympy_expr = mathjson_to_sympy(request.expr)
-
     # Execute operation based on type
     result_expr = None
     steps = None
+    sympy_expr = None
 
-    if request.op.value == "simplify":
-        result_expr = _simplify(sympy_expr)
-    elif request.op.value == "expand":
-        result_expr = _expand(sympy_expr)
-    elif request.op.value == "factor":
-        result_expr = _factor(sympy_expr)
-    elif request.op.value == "differentiate":
-        result_expr = _differentiate(sympy_expr, request.vars)
-    elif request.op.value == "integrate":
-        result_expr = _integrate(sympy_expr, request.vars, request.assumptions, include_steps)
-        if include_steps:
-            steps = result_expr.get("steps")
-            result_expr = result_expr.get("result")
-    elif request.op.value == "limit":
-        result_expr = _limit(sympy_expr, request.vars, request.assumptions)
-    elif request.op.value == "series":
-        result_expr = _series(sympy_expr, request.vars, request.assumptions)
-    elif request.op.value == "solve":
-        result_expr = _solve(sympy_expr, request.vars)
-    elif request.op.value == "linsolve":
-        result_expr = _linsolve(sympy_expr)
-    elif request.op.value == "rref":
-        result_expr = _rref(sympy_expr)
-    elif request.op.value == "eigen":
-        result_expr = _eigen(sympy_expr)
-    elif request.op.value == "evaluate":
-        result_expr = _evaluate(sympy_expr)
-    elif request.op.value == "assign":
-        result_expr = _assign(sympy_expr, request.expr)
+    # Special handling for assign - don't convert entire expression to SymPy
+    # (matrices in equations don't work well in SymPy)
+    if request.op.value == "assign":
+        result_expr = _assign(request.expr)
     else:
-        raise ValueError(f"Unsupported operation: {request.op}")
+        # Convert MathJSON to SymPy for all other operations
+        sympy_expr = mathjson_to_sympy(request.expr)
+
+        if request.op.value == "simplify":
+            result_expr = _simplify(sympy_expr)
+        elif request.op.value == "expand":
+            result_expr = _expand(sympy_expr)
+        elif request.op.value == "factor":
+            result_expr = _factor(sympy_expr)
+        elif request.op.value == "differentiate":
+            result_expr = _differentiate(sympy_expr, request.vars)
+        elif request.op.value == "integrate":
+            result_expr = _integrate(sympy_expr, request.vars, request.assumptions, include_steps)
+            if include_steps:
+                steps = result_expr.get("steps")
+                result_expr = result_expr.get("result")
+        elif request.op.value == "limit":
+            result_expr = _limit(sympy_expr, request.vars, request.assumptions)
+        elif request.op.value == "series":
+            result_expr = _series(sympy_expr, request.vars, request.assumptions)
+        elif request.op.value == "solve":
+            result_expr = _solve(sympy_expr, request.vars)
+        elif request.op.value == "linsolve":
+            result_expr = _linsolve(sympy_expr)
+        elif request.op.value == "rref":
+            result_expr = _rref(sympy_expr)
+        elif request.op.value == "eigen":
+            result_expr = _eigen(sympy_expr)
+        elif request.op.value == "evaluate":
+            result_expr = _evaluate(sympy_expr)
+        else:
+            raise ValueError(f"Unsupported operation: {request.op}")
 
     # Format output
     result = CasResult()
@@ -300,7 +304,7 @@ def _evaluate(expr: Any) -> Any:
     return sp.simplify(expr)
 
 
-def _assign(sympy_expr: Any, mathjson_expr: Any) -> Any:
+def _assign(mathjson_expr: Any) -> Any:
     """
     Handle variable and function assignments.
 
@@ -311,31 +315,30 @@ def _assign(sympy_expr: Any, mathjson_expr: Any) -> Any:
     - A function definition: f(x) = x² + 1
 
     Args:
-        sympy_expr: The SymPy expression (Equal object)
-        mathjson_expr: The original MathJSON (needed to extract variable name)
+        mathjson_expr: The MathJSON expression ["Equal", lhs, rhs]
 
     Returns:
-        The assigned value (right-hand side)
+        The assigned value (right-hand side) as a SymPy expression
 
     Examples:
         A = 5 → stores A=5, returns 5
         f(x) = x² → stores f as function, returns x²
+        M = [[1,2],[3,4]] → stores M as Matrix, returns Matrix
     """
     from app.core.session import assign_variable
 
-    # sympy_expr should be an Equality
-    if not isinstance(sympy_expr, sp.Equality):
+    # Validate structure
+    if not isinstance(mathjson_expr, list) or mathjson_expr[0] != "Equal":
         raise ValueError("Assign operation requires an equation with =")
 
-    # Extract left and right sides
-    lhs_sympy = sympy_expr.lhs
-    rhs_sympy = sympy_expr.rhs
-
-    # Determine assignment type from MathJSON (more reliable than SymPy AST)
-    if not isinstance(mathjson_expr, list) or mathjson_expr[0] != "Equal":
-        raise ValueError("Invalid assignment structure")
+    if len(mathjson_expr) < 3:
+        raise ValueError("Invalid assignment structure - missing lhs or rhs")
 
     lhs_mathjson = mathjson_expr[1]
+    rhs_mathjson = mathjson_expr[2]
+
+    # Convert RHS to SymPy
+    rhs_sympy = mathjson_to_sympy(rhs_mathjson)
 
     # Case 1: Simple variable assignment (A = value)
     if isinstance(lhs_mathjson, str):
