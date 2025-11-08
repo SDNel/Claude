@@ -144,7 +144,17 @@ def validate_mathjson(expr: Any, max_depth: int = 50, current_depth: int = 0) ->
 
         # Check against allow-list
         if operation not in ALLOWED_OPERATIONS:
-            raise ValueError(f"Operation not allowed: {operation}")
+            # Allow undefined function names (like f, g, h for f(x), g(t), etc.)
+            # These are treated as symbolic functions in SymPy
+            # Must be:
+            # 1. A valid identifier (letters, numbers, underscores)
+            # 2. Not too long (prevent abuse)
+            # 3. Have at least one argument (it's a function application)
+            if len(expr) > 1 and operation.isidentifier() and len(operation) <= 20:
+                # This is an undefined function application - allow it
+                pass
+            else:
+                raise ValueError(f"Operation not allowed: {operation}")
 
         # Recursively validate arguments
         for arg in expr[1:]:

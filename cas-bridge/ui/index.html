@@ -378,8 +378,17 @@ window.addEventListener('load', () => {
           first[2][1] === "d") {
         // Extract variable and expression
         const variable = first[2][2];
-        const expr = mathJSON[2];
-        console.log('Fixed derivative pattern 1: d/dx notation detected');
+        let expr = mathJSON[2];
+
+        // Check if we have a function application pattern: f(x)
+        // Sometimes parsed as: ["Multiply", d/dx, "f", "x"]
+        if (typeof expr === 'string' && mathJSON.length >= 4 && mathJSON[3] === variable) {
+          expr = [expr, variable];
+          console.log('Fixed derivative pattern 1: d/dx f(x) notation detected (reconstructed function application)');
+        } else {
+          console.log('Fixed derivative pattern 1: d/dx notation detected');
+        }
+
         return ["D", fixDerivativeNotation(expr), variable];
       }
     }
@@ -392,8 +401,18 @@ window.addEventListener('load', () => {
       if (hasError && hasDoubleDd) {
         // Extract variable (4th element) and expression (5th element)
         const variable = mathJSON[4];
-        const expr = mathJSON[5];
-        console.log('Fixed derivative pattern 2: \\dfrac{d}{dx} notation detected');
+        let expr = mathJSON[5];
+
+        // Check if we have a function application pattern: f(x)
+        // The Tuple might have f as expr and x as the next element
+        if (typeof expr === 'string' && mathJSON.length >= 7 && mathJSON[6] === variable) {
+          // This is f(x) where f is the function and x is the argument
+          expr = [expr, variable];
+          console.log('Fixed derivative pattern 2: \\dfrac{d}{dx} f(x) notation detected (reconstructed function application)');
+        } else {
+          console.log('Fixed derivative pattern 2: \\dfrac{d}{dx} notation detected');
+        }
+
         return ["D", fixDerivativeNotation(expr), variable];
       }
     }
@@ -407,8 +426,16 @@ window.addEventListener('load', () => {
           Array.isArray(first[2]) && first[2][0] === "Multiply" &&
           first[2][1] === "d") {
         const variable = first[2][2];
-        const expr = mathJSON[2];
-        console.log('Fixed derivative pattern 3: sequence with d/dx detected');
+        let expr = mathJSON[2];
+
+        // Check if we have a function application pattern: f(x)
+        if (typeof expr === 'string' && mathJSON.length >= 4 && mathJSON[3] === variable) {
+          expr = [expr, variable];
+          console.log('Fixed derivative pattern 3: sequence with d/dx f(x) detected (reconstructed function application)');
+        } else {
+          console.log('Fixed derivative pattern 3: sequence with d/dx detected');
+        }
+
         return ["D", fixDerivativeNotation(expr), variable];
       }
     }
