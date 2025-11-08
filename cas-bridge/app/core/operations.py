@@ -159,11 +159,51 @@ def _integrate(expr: Any, vars: Optional[list], assumptions: Optional[dict], ste
         result = sp.integrate(expr, var)
 
     if steps:
-        # Extract step-by-step solution using SymPy's integral_steps
-        step_list = _extract_integration_steps(expr, var)
+        # Use AI to generate step-by-step solution (Phase 2)
+        step_list = _generate_ai_integration_steps(expr, var, result)
         return {"result": result, "steps": step_list}
 
     return result
+
+
+def _generate_ai_integration_steps(expr: Any, var: Any, result: Any) -> list:
+    """
+    Generate AI-powered step-by-step integration using Anthropic Claude.
+
+    Args:
+        expr: The integrand (SymPy expression)
+        var: The integration variable (SymPy symbol)
+        result: The final result from SymPy (anchoring point)
+
+    Returns:
+        List of steps in the format expected by the frontend
+    """
+    try:
+        from app.ai.step_generator import generate_steps_with_ai
+
+        # Convert to LaTeX for AI
+        problem_latex = f"\\int {sp.latex(expr)}\\,d{sp.latex(var)}"
+        solution_latex = sp.latex(result)
+
+        # Generate steps using AI
+        steps = generate_steps_with_ai(
+            problem_latex=problem_latex,
+            solution_latex=solution_latex,
+            operation_type="integrate",
+            max_steps=10
+        )
+
+        return steps
+
+    except Exception as e:
+        # Fallback to simple step if AI fails
+        return [{
+            'expression': str(result),
+            'latex': sp.latex(result),
+            'depth': 0,
+            'explanation': f'Integration computed. AI step generation failed: {str(e)}'
+        }]
+
 
 
 def _extract_integration_steps(expr: Any, var: Any) -> list:
