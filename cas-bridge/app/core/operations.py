@@ -92,6 +92,9 @@ import sympy as sp
 
 def _simplify(expr: Any) -> Any:
     """Simplify expression."""
+    # First expand complex expressions (e.g., e^(π*i) → -1)
+    expr = sp.expand_complex(expr)
+    # Then simplify
     return sp.simplify(expr)
 
 
