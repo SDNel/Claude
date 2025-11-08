@@ -40,6 +40,7 @@ def mathjson_to_sympy(mathjson: Any) -> Any:
             'Pi': sp.pi,
             'ExponentialE': sp.E,
             'ImaginaryI': sp.I,
+            'ImaginaryUnit': sp.I,  # MathLive also uses this for i
             'Infinity': sp.oo,
             'ComplexInfinity': sp.zoo,
             'True': sp.true,
