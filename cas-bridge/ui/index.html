@@ -367,6 +367,30 @@ window.addEventListener('load', () => {
       };
     }
 
+    // Case 1.5: Implicit multiplication parsed as identifier → Assignment
+    // MathLive parses "expr" as ["Multiply", "e", "x", "p", "r"]
+    // Detect when this is actually a variable name, not an expression
+    if (Array.isArray(lhs) && lhs.length >= 2 &&
+        (lhs[0] === 'Multiply' || lhs[0] === 'InvisibleOperator')) {
+      const args = lhs.slice(1);
+
+      // Check if all args are single-letter strings (single symbols)
+      if (args.every(arg => typeof arg === 'string' && arg.length === 1 && /^[a-zA-Z_]$/.test(arg))) {
+        // Concatenate to form potential variable name
+        const varName = args.join('');
+
+        // Check if it forms a valid identifier
+        if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(varName)) {
+          console.log('Classified as assignment: implicit multiplication resolved to identifier', varName);
+          return {
+            type: 'assignment',
+            variable: varName,
+            value: rhs
+          };
+        }
+      }
+    }
+
     // Case 2: Function application → Function definition
     // Pattern: ["f", "x"] or ["g", "x", "y"]
     // All elements after first must be variable names (strings)

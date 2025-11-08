@@ -346,10 +346,37 @@ def _assign(mathjson_expr: Any) -> Any:
         assign_variable(variable_name, rhs_sympy, mathjson=mathjson_expr)
         return rhs_sympy
 
+    # Case 1.5: Implicit multiplication parsed as identifier (expr → e*x*p*r)
+    # MathLive parses multi-letter identifiers as implicit multiplication
+    # Example: ["Multiply", "e", "x", "p", "r"] should be variable "expr"
+    if (isinstance(lhs_mathjson, list) and len(lhs_mathjson) >= 2 and
+        lhs_mathjson[0] in ("Multiply", "InvisibleOperator")):
+        args = lhs_mathjson[1:]
+
+        # Check if all args are single-letter strings
+        if all(isinstance(arg, str) and len(arg) == 1 and arg.isalpha() for arg in args):
+            # Concatenate to form variable name
+            variable_name = ''.join(args)
+
+            # Verify it's a valid identifier
+            if variable_name.isidentifier():
+                assign_variable(variable_name, rhs_sympy, mathjson=mathjson_expr)
+                return rhs_sympy
+
     # Case 2: Function definition (f(x) = expr)
+    # Known MathJSON operations that should not be treated as function names
+    KNOWN_OPERATIONS = {
+        'Add', 'Subtract', 'Multiply', 'Mul', 'Divide', 'Negate', 'Power', 'Sqrt', 'Root',
+        'Sin', 'Cos', 'Tan', 'Sec', 'Csc', 'Cot',
+        'Exp', 'Log', 'Ln', 'Abs', 'Factorial',
+        'D', 'Derivative', 'Integrate', 'Limit',
+        'Equal', 'List', 'Tuple', 'Matrix',
+        'InvisibleOperator', 'Apply', 'Prime'
+    }
+
     if isinstance(lhs_mathjson, list) and len(lhs_mathjson) >= 2:
         func_name = lhs_mathjson[0]
-        if isinstance(func_name, str):
+        if isinstance(func_name, str) and func_name not in KNOWN_OPERATIONS:
             # Create SymPy Lambda function
             # Extract argument symbols from lhs
             args = lhs_mathjson[1:]
