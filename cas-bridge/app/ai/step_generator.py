@@ -86,7 +86,7 @@ Return ONLY the JSON array, no additional text."""
 
     # Call Claude API
     message = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-sonnet-4-5-20250929",  # Claude Sonnet 4.5 (latest)
         max_tokens=4096,
         messages=[
             {"role": "user", "content": prompt}
