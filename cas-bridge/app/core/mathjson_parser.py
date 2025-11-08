@@ -34,6 +34,20 @@ def mathjson_to_sympy(mathjson: Any) -> Any:
         if stored_value is not None:
             return stored_value
 
+        # Check if it's a mathematical constant
+        # Map MathJSON constants to SymPy constants
+        MATH_CONSTANTS = {
+            'Pi': sp.pi,
+            'ExponentialE': sp.E,
+            'ImaginaryI': sp.I,
+            'Infinity': sp.oo,
+            'ComplexInfinity': sp.zoo,
+            'True': sp.true,
+            'False': sp.false
+        }
+        if mathjson in MATH_CONSTANTS:
+            return MATH_CONSTANTS[mathjson]
+
         # Otherwise, treat as a symbol
         return sp.Symbol(mathjson)
 
