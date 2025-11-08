@@ -1001,15 +1001,34 @@ window.addEventListener('load', () => {
       // If it's 'evaluate' with Integrate, convert to 'integrate' format
       if (stepsRequest.op === 'evaluate' && Array.isArray(stepsRequest.expr) &&
           stepsRequest.expr[0] === 'Integrate') {
-        // Extract: ["Integrate", variable, integrand] → {op: 'integrate', expr: integrand, vars: [variable]}
-        const variable = stepsRequest.expr[1];
-        const integrand = stepsRequest.expr[2];
-        stepsRequest = {
-          ...stepsRequest,
-          op: 'integrate',
-          expr: integrand,
-          vars: [variable]
-        };
+
+        // MathJSON structure: ["Integrate", ["Function", ["Block", integrand], var], ["Limits", ...]]
+        const integrateExpr = stepsRequest.expr;
+
+        let integrand, variable;
+
+        // Extract from nested Function/Block structure
+        if (Array.isArray(integrateExpr[1]) && integrateExpr[1][0] === 'Function') {
+          const funcPart = integrateExpr[1];
+          variable = funcPart[2]; // Variable is 3rd element in Function
+
+          // Integrand is inside Block
+          if (Array.isArray(funcPart[1]) && funcPart[1][0] === 'Block') {
+            integrand = funcPart[1][1]; // Integrand is 2nd element in Block
+          }
+        }
+
+        if (integrand && variable) {
+          stepsRequest = {
+            ...stepsRequest,
+            op: 'integrate',
+            expr: integrand,
+            vars: [variable]
+          };
+          console.log('Transformed to integrate request:', stepsRequest);
+        } else {
+          console.error('Failed to extract integrand and variable from:', integrateExpr);
+        }
       }
 
       const response = await fetch('http://localhost:8000/steps', {
