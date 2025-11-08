@@ -96,6 +96,17 @@ Return ONLY the JSON array, no additional text."""
     # Extract the response
     response_text = message.content[0].text
 
+    # Strip markdown code blocks if present
+    # Claude sometimes wraps JSON in ```json ... ```
+    response_text = response_text.strip()
+    if response_text.startswith('```'):
+        # Find the first newline after opening ```
+        first_newline = response_text.find('\n')
+        # Find the closing ```
+        last_backticks = response_text.rfind('```')
+        if first_newline != -1 and last_backticks != -1:
+            response_text = response_text[first_newline+1:last_backticks].strip()
+
     # Parse JSON response
     try:
         steps = json.loads(response_text)
