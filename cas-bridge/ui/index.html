@@ -397,6 +397,42 @@ window.addEventListener('load', () => {
       }
     }
 
+    // Pattern 4: Typing d/dx from real keyboard
+    // ["Tuple", ["Divide", "d", ["InvisibleOperator", ..., var]], expr]
+    if (mathJSON[0] === "Tuple" && mathJSON.length >= 3) {
+      const first = mathJSON[1];
+      if (Array.isArray(first) && first[0] === "Divide" && first[1] === "d") {
+        // Check if second part contains InvisibleOperator with variable
+        const denominator = first[2];
+        let variable = null;
+
+        if (Array.isArray(denominator)) {
+          if (denominator[0] === "InvisibleOperator") {
+            // Extract variable from InvisibleOperator
+            // Pattern: ["InvisibleOperator", ["Error", ...], "x"]
+            // We want the last non-Error element
+            for (let i = denominator.length - 1; i >= 1; i--) {
+              if (typeof denominator[i] === 'string' &&
+                  denominator[i] !== 'InvisibleOperator' &&
+                  !Array.isArray(denominator[i])) {
+                variable = denominator[i];
+                break;
+              }
+            }
+          } else if (denominator[0] === "Multiply" && denominator[1] === "d") {
+            // Alternative: ["Multiply", "d", var]
+            variable = denominator[2];
+          }
+        }
+
+        if (variable) {
+          const expr = mathJSON[2];
+          console.log('Fixed derivative pattern 4: real keyboard d/dx detected');
+          return ["D", fixDerivativeNotation(expr), variable];
+        }
+      }
+    }
+
     // Recursively fix nested structures
     return mathJSON.map(item => fixDerivativeNotation(item));
   }

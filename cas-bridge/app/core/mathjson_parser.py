@@ -106,6 +106,9 @@ def mathjson_to_sympy(mathjson: Any) -> Any:
             "Sequence": lambda args: [mathjson_to_sympy(arg) for arg in args],
             "Apply": lambda args: _handle_apply_operation(args),  # Function application
             "Prime": lambda args: _handle_prime_notation(args),  # Prime notation marker
+            "InvisibleOperator": lambda args: sp.Mul(*[mathjson_to_sympy(arg) for arg in args if not _is_error_node(arg)]),  # Implicit multiplication
+            "Error": lambda args: None,  # Error nodes are filtered out
+            "LatexString": lambda args: None,  # LaTeX string literals are ignored
 
             # Other
             "Abs": lambda args: sp.Abs(mathjson_to_sympy(args[0])),
@@ -132,6 +135,11 @@ def mathjson_to_sympy(mathjson: Any) -> Any:
 
 
 # Helper functions for Compute Engine operations (added 2025-11-07)
+
+def _is_error_node(node: Any) -> bool:
+    """Check if a MathJSON node is an Error node."""
+    return isinstance(node, list) and len(node) > 0 and node[0] == "Error"
+
 
 def _handle_d_operation(args: list) -> Any:
     """

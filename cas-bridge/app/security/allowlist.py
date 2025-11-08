@@ -72,6 +72,9 @@ ALLOWED_OPERATIONS: Set[str] = {
     "Apply",       # Function application (used for derivatives like sin'(x))
     "Prime",       # Prime notation marker
     "PartialDerivative",  # Partial derivative symbol
+    "InvisibleOperator",  # Implicit multiplication (e.g., 2x, dx)
+    "Error",       # Error nodes (we filter these in preprocessing)
+    "LatexString",  # LaTeX string literals (in error messages)
     # Comparison
     "Equal",
     "Greater",
