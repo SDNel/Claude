@@ -102,7 +102,7 @@ def mathjson_to_sympy(mathjson: Any) -> Any:
             "Function": lambda args: _handle_function_structure(args),
             "Block": lambda args: _handle_block_structure(args),
             "Tuple": lambda args: tuple(mathjson_to_sympy(arg) for arg in args),
-            "List": lambda args: [mathjson_to_sympy(arg) for arg in args],
+            "List": lambda args: _handle_list_structure(args),
             "Sequence": lambda args: [mathjson_to_sympy(arg) for arg in args],
             "Apply": lambda args: _handle_apply_operation(args),  # Function application
             "Prime": lambda args: _handle_prime_notation(args),  # Prime notation marker
@@ -331,6 +331,39 @@ def _handle_block_structure(args: list) -> Any:
         raise ValueError("Block structure requires at least 1 argument")
 
     return mathjson_to_sympy(args[0])
+
+
+def _handle_list_structure(args: list) -> Any:
+    """
+    Handle List structure from Compute Engine.
+
+    Format: ["List", elem1, elem2, ...]
+
+    Two cases:
+    1. Nested lists (matrix): ["List", ["List", 1, 2], ["List", 3, 4]]
+       → Convert to sp.Matrix([[1, 2], [3, 4]])
+    2. Simple list: ["List", 1, 2, 3]
+       → Convert to Python list [1, 2, 3]
+    """
+    if len(args) == 0:
+        return []
+
+    # Convert all elements
+    converted_args = [mathjson_to_sympy(arg) for arg in args]
+
+    # Check if this is a matrix (all elements are lists)
+    if all(isinstance(elem, list) for elem in converted_args):
+        # It's a matrix - convert to sp.Matrix
+        try:
+            return sp.Matrix(converted_args)
+        except (TypeError, ValueError) as e:
+            # If conversion fails, return as list
+            return converted_args
+
+    # Check if elements are SymPy expressions that could form a vector
+    # For single-dimensional lists of numbers, keep as Python list
+    # (used for equation systems, etc.)
+    return converted_args
 
 
 def _handle_derivative_operation(args: list) -> Any:
