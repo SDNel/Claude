@@ -508,20 +508,20 @@ window.addEventListener('load', () => {
     };
   }
 
+  // Helper: Recursively check if MathJSON contains a specific operation
+  function containsOperation(json, operationName) {
+    if (!json) return false;
+    if (Array.isArray(json)) {
+      if (json[0] === operationName) return true;
+      return json.some(item => containsOperation(item, operationName));
+    }
+    return false;
+  }
+
   // Auto-detect operation type from MathJSON expression
   // Matches Desmos/GeoGebra behavior - no manual operation selection needed
   function detectOperation(mathJSON) {
     if (!mathJSON) return 'simplify';
-
-    // Recursively check for operation types
-    function containsOperation(json, operationName) {
-      if (!json) return false;
-      if (Array.isArray(json)) {
-        if (json[0] === operationName) return true;
-        return json.some(item => containsOperation(item, operationName));
-      }
-      return false;
-    }
 
     // System of equations: ["List", eq1, eq2, ...]
     if (Array.isArray(mathJSON) && mathJSON[0] === 'List') {
@@ -950,7 +950,12 @@ window.addEventListener('load', () => {
 
         // Store last request and show steps button for integration
         lastRequest = payload;
-        if (payload.op === 'integrate') {
+
+        // Check if it's an integration (either 'integrate' op or 'evaluate' with Integrate operation)
+        const isIntegration = payload.op === 'integrate' ||
+          (payload.op === 'evaluate' && containsOperation(payload.expr, 'Integrate'));
+
+        if (isIntegration) {
           $('showStepsButtonContainer').style.display = 'block';
         } else {
           $('showStepsButtonContainer').style.display = 'none';
@@ -990,10 +995,27 @@ window.addEventListener('load', () => {
     stepsBtn.disabled = true;
 
     try {
+      // Transform request if needed
+      let stepsRequest = { ...lastRequest };
+
+      // If it's 'evaluate' with Integrate, convert to 'integrate' format
+      if (stepsRequest.op === 'evaluate' && Array.isArray(stepsRequest.expr) &&
+          stepsRequest.expr[0] === 'Integrate') {
+        // Extract: ["Integrate", variable, integrand] → {op: 'integrate', expr: integrand, vars: [variable]}
+        const variable = stepsRequest.expr[1];
+        const integrand = stepsRequest.expr[2];
+        stepsRequest = {
+          ...stepsRequest,
+          op: 'integrate',
+          expr: integrand,
+          vars: [variable]
+        };
+      }
+
       const response = await fetch('http://localhost:8000/steps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(lastRequest)
+        body: JSON.stringify(stepsRequest)
       });
 
       const data = await response.json();
