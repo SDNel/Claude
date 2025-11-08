@@ -45,6 +45,16 @@ def mathjson_to_sympy(mathjson: Any) -> Any:
         operation = mathjson[0]
         args = mathjson[1:]
 
+        # Check if operation is a stored function (Lambda) that should be evaluated
+        # This handles function application like f(2) where f is defined in the registry
+        if isinstance(operation, str):
+            from app.core.session import get_variable
+            stored_func = get_variable(operation)
+            if stored_func is not None and isinstance(stored_func, sp.Lambda):
+                # Evaluate the function with the provided arguments
+                func_args = [mathjson_to_sympy(arg) for arg in args]
+                return stored_func(*func_args)
+
         # Map MathJSON operations to SymPy functions (allow-list approach)
         # Updated 2025-11-07: Added Compute Engine operations from Phase 1b research
         operation_map = {
