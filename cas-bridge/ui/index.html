@@ -218,6 +218,49 @@
   .hidden {
     display: none !important;
   }
+
+  /* Steps Panel Styling */
+  .steps-container {
+    background: #fafafa;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  .step-item {
+    background: #fff;
+    border-left: 4px solid #667eea;
+    padding: 12px 16px;
+    margin: 8px 0;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  .step-item.depth-1 {
+    margin-left: 24px;
+    border-left-color: #9ca3af;
+  }
+
+  .step-item.depth-2 {
+    margin-left: 48px;
+    border-left-color: #d1d5db;
+  }
+
+  .step-explanation {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .step-expression {
+    font-size: 20px;
+    color: #333;
+    padding: 8px 0;
+    text-align: center;
+  }
 </style>
 </head>
 
@@ -281,6 +324,17 @@
     <h2>✨ Result</h2>
     <div id="resultOutput" class="result-box empty">
       Results will appear here...
+    </div>
+    <div id="showStepsButtonContainer" style="margin-top: 12px; display: none;">
+      <button id="showStepsBtn" class="btn-secondary">📖 Show Step-by-Step Solution</button>
+    </div>
+  </div>
+
+  <!-- Steps Card -->
+  <div id="stepsCard" class="card" style="display: none;">
+    <h2>📖 Step-by-Step Solution <button id="hideStepsBtn" class="btn-secondary" style="float:right; padding:4px 12px; font-size:12px;">✕ Hide</button></h2>
+    <div id="stepsContent" class="steps-container">
+      <!-- Steps will be populated here -->
     </div>
   </div>
 
@@ -814,6 +868,9 @@ window.addEventListener('load', () => {
     }
   }
 
+  // Store last request for step-by-step
+  let lastRequest = null;
+
   // Run Operation
   $('runBtn').addEventListener('click', async () => {
     let payload;
@@ -890,12 +947,24 @@ window.addEventListener('load', () => {
 
       if (data.result && data.result.latex) {
         renderResult(data.result.latex);
+
+        // Store last request and show steps button for integration
+        lastRequest = payload;
+        if (payload.op === 'integrate') {
+          $('showStepsButtonContainer').style.display = 'block';
+        } else {
+          $('showStepsButtonContainer').style.display = 'none';
+        }
+        // Hide steps panel when new operation is run
+        $('stepsCard').style.display = 'none';
       } else {
         renderResult('');
+        $('showStepsButtonContainer').style.display = 'none';
       }
     } catch (e) {
       jsonOutput.textContent = 'Error: ' + e.message + '\n\nMake sure the CAS service is running at http://localhost:8000';
       renderResult('');
+      $('showStepsButtonContainer').style.display = 'none';
     }
   });
 
@@ -905,6 +974,92 @@ window.addEventListener('load', () => {
     resultOutput.innerHTML = '<span style="color:#999">Results will appear here...</span>';
     resultOutput.classList.add('empty');
     jsonOutput.textContent = 'Click "Run Operation" to see the API response...';
+    $('showStepsButtonContainer').style.display = 'none';
+    $('stepsCard').style.display = 'none';
+  });
+
+  // Step-by-Step Solution
+  async function fetchAndDisplaySteps() {
+    if (!lastRequest) {
+      console.error('No request to show steps for');
+      return;
+    }
+
+    const stepsBtn = $('showStepsBtn');
+    stepsBtn.textContent = '⏳ Loading steps...';
+    stepsBtn.disabled = true;
+
+    try {
+      const response = await fetch('http://localhost:8000/steps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lastRequest)
+      });
+
+      const data = await response.json();
+
+      if (data.result && data.result.steps) {
+        displaySteps(data.result.steps);
+        $('stepsCard').style.display = 'block';
+        // Scroll to steps panel
+        $('stepsCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        $('stepsContent').innerHTML = '<p style="color:#d32f2f;">No steps available for this operation.</p>';
+        $('stepsCard').style.display = 'block';
+      }
+    } catch (e) {
+      console.error('Failed to fetch steps:', e);
+      $('stepsContent').innerHTML = '<p style="color:#d32f2f;">Failed to load steps. ' + e.message + '</p>';
+      $('stepsCard').style.display = 'block';
+    } finally {
+      stepsBtn.textContent = '📖 Show Step-by-Step Solution';
+      stepsBtn.disabled = false;
+    }
+  }
+
+  function displaySteps(steps) {
+    const container = $('stepsContent');
+    container.innerHTML = '';
+
+    if (!Array.isArray(steps) || steps.length === 0) {
+      container.innerHTML = '<p style="color:#999;">No steps available.</p>';
+      return;
+    }
+
+    steps.forEach((step, index) => {
+      const stepDiv = document.createElement('div');
+      stepDiv.className = 'step-item';
+      if (step.depth) {
+        stepDiv.classList.add(`depth-${step.depth}`);
+      }
+
+      const explanation = document.createElement('div');
+      explanation.className = 'step-explanation';
+      explanation.textContent = `${index + 1}. ${step.explanation}`;
+
+      const expression = document.createElement('div');
+      expression.className = 'step-expression';
+
+      // Render LaTeX using KaTeX
+      try {
+        katex.render(step.latex, expression, {
+          throwOnError: false,
+          displayMode: true
+        });
+      } catch (e) {
+        expression.textContent = step.expression;
+      }
+
+      stepDiv.appendChild(explanation);
+      stepDiv.appendChild(expression);
+      container.appendChild(stepDiv);
+    });
+  }
+
+  $('showStepsBtn').addEventListener('click', fetchAndDisplaySteps);
+
+  $('hideStepsBtn').addEventListener('click', () => {
+    $('stepsCard').style.display = 'none';
   });
 
   // Registry Management
