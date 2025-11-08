@@ -397,10 +397,25 @@ window.addEventListener('load', () => {
       }
     }
 
-    // Pattern 4: Typing d/dx from real keyboard
-    // ["Tuple", ["Divide", "d", ["InvisibleOperator", ..., var]], expr]
+    // Pattern 4: Typing d/dx from real keyboard OR undefined function prime f'(x)
+    // ["Tuple", ["Divide", "d", ["InvisibleOperator", ..., var]], expr] OR
+    // ["Tuple", ["Prime", "f"], "x"]
     if (mathJSON[0] === "Tuple" && mathJSON.length >= 3) {
       const first = mathJSON[1];
+
+      // Sub-pattern 4a: Prime notation on undefined function f'(x)
+      // ["Tuple", ["Prime", "f"], "x"] → should be derivative of f(x)
+      if (Array.isArray(first) && first[0] === "Prime" && first.length === 2) {
+        const funcName = first[1];
+        const variable = mathJSON[2];
+        if (typeof funcName === 'string' && typeof variable === 'string') {
+          console.log('Fixed derivative pattern 4a: undefined function prime notation f\'(x) detected');
+          // Convert to: D of function application
+          return ["D", [funcName, variable], variable];
+        }
+      }
+
+      // Sub-pattern 4b: d/dx typed from real keyboard
       if (Array.isArray(first) && first[0] === "Divide" && first[1] === "d") {
         // Check if second part contains InvisibleOperator with variable
         const denominator = first[2];
@@ -427,7 +442,7 @@ window.addEventListener('load', () => {
 
         if (variable) {
           const expr = mathJSON[2];
-          console.log('Fixed derivative pattern 4: real keyboard d/dx detected');
+          console.log('Fixed derivative pattern 4b: real keyboard d/dx detected');
           return ["D", fixDerivativeNotation(expr), variable];
         }
       }

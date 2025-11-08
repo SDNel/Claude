@@ -120,6 +120,14 @@ def mathjson_to_sympy(mathjson: Any) -> Any:
         if operation in operation_map:
             return operation_map[operation](args)
         else:
+            # Check if this is an undefined function application
+            # Format: ["f", "x"] where f is a function name (lowercase single letter or identifier)
+            if isinstance(operation, str) and len(args) > 0:
+                # Treat as undefined function application
+                func = sp.Function(operation)
+                func_args = [mathjson_to_sympy(arg) for arg in args]
+                return func(*func_args)
+
             raise ValueError(f"Unsupported MathJSON operation: {operation}")
 
     if isinstance(mathjson, dict):
