@@ -345,6 +345,62 @@ window.addEventListener('load', () => {
     });
   });
 
+  // Fix derivative notation patterns in MathJSON
+  // Converts d/dx patterns to proper D operation
+  function fixDerivativeNotation(mathJSON) {
+    if (!Array.isArray(mathJSON)) {
+      return mathJSON;
+    }
+
+    // Pattern 1: ["Multiply", ["Divide", "d", ["Multiply", "d", var]], expr]
+    // This is what \frac{d}{dx}expr becomes
+    if (mathJSON[0] === "Multiply" && mathJSON.length >= 3) {
+      const first = mathJSON[1];
+      if (Array.isArray(first) && first[0] === "Divide" &&
+          first[1] === "d" &&
+          Array.isArray(first[2]) && first[2][0] === "Multiply" &&
+          first[2][1] === "d") {
+        // Extract variable and expression
+        const variable = first[2][2];
+        const expr = mathJSON[2];
+        console.log('Fixed derivative pattern 1: d/dx notation detected');
+        return ["D", fixDerivativeNotation(expr), variable];
+      }
+    }
+
+    // Pattern 2: ["Tuple", ["Error", ...], "d", "d", var, expr]
+    // This is what \dfrac{d}{dx}expr becomes when it errors
+    if (mathJSON[0] === "Tuple" && mathJSON.length >= 6) {
+      const hasError = Array.isArray(mathJSON[1]) && mathJSON[1][0] === "Error";
+      const hasDoubleDd = mathJSON[2] === "d" && mathJSON[3] === "d";
+      if (hasError && hasDoubleDd) {
+        // Extract variable (4th element) and expression (5th element)
+        const variable = mathJSON[4];
+        const expr = mathJSON[5];
+        console.log('Fixed derivative pattern 2: \\dfrac{d}{dx} notation detected');
+        return ["D", fixDerivativeNotation(expr), variable];
+      }
+    }
+
+    // Pattern 3: Sequence containing derivative
+    // ["Sequence", ["Divide", "d", ["Multiply", "d", var]], expr]
+    if (mathJSON[0] === "Sequence" && mathJSON.length >= 3) {
+      const first = mathJSON[1];
+      if (Array.isArray(first) && first[0] === "Divide" &&
+          first[1] === "d" &&
+          Array.isArray(first[2]) && first[2][0] === "Multiply" &&
+          first[2][1] === "d") {
+        const variable = first[2][2];
+        const expr = mathJSON[2];
+        console.log('Fixed derivative pattern 3: sequence with d/dx detected');
+        return ["D", fixDerivativeNotation(expr), variable];
+      }
+    }
+
+    // Recursively fix nested structures
+    return mathJSON.map(item => fixDerivativeNotation(item));
+  }
+
   // LaTeX to MathJSON converter using Compute Engine (the PROPER way)
   function latexToMathJSON(latex) {
     try {
@@ -360,7 +416,10 @@ window.addEventListener('load', () => {
 
       // Use Compute Engine to parse LaTeX to MathJSON
       const expr = window.ce.parse(latex);
-      const mathJSON = expr.json;
+      let mathJSON = expr.json;
+
+      // Fix derivative notation patterns (d/dx → D operation)
+      mathJSON = fixDerivativeNotation(mathJSON);
 
       console.log('Converted LaTeX to MathJSON:', latex, '->', mathJSON);
       return mathJSON;
