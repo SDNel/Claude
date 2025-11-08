@@ -362,10 +362,98 @@ window.addEventListener('load', () => {
   }
 
   // Fix derivative notation patterns in MathJSON
-  // Converts d/dx patterns to proper D operation
+  // Converts d/dx and ∂/∂x patterns to proper D operation
   function fixDerivativeNotation(mathJSON) {
     if (!Array.isArray(mathJSON)) {
       return mathJSON;
+    }
+
+    // Pattern 0: Partial derivative ∂/∂x notation
+    // ["Tuple", ["Divide", ["PartialDerivative"], ...], expr]
+    if (mathJSON[0] === "Tuple" && mathJSON.length >= 3) {
+      const first = mathJSON[1];
+      if (Array.isArray(first) && first[0] === "Divide" &&
+          Array.isArray(first[1]) && first[1][0] === "PartialDerivative") {
+
+        console.log('Partial derivative pattern detected. Full structure:', JSON.stringify(mathJSON, null, 2));
+
+        // Extract the expression to differentiate
+        let expr = mathJSON[2];
+        let variable = null;
+
+        // Try to find the variable:
+        // 1. Look in the denominator (might be in Error node or other structure)
+        // 2. Check if there are more elements in the Tuple that contain the variable
+        // 3. Fall back to extracting from expression
+
+        // Check if Tuple has more elements after the Divide (variable might be separate)
+        if (mathJSON.length >= 4 && typeof mathJSON[3] === 'string') {
+          variable = mathJSON[3];
+          console.log('Found variable in Tuple[3]:', variable);
+        }
+
+        // Check in the Divide denominator - might have variable info
+        if (!variable && Array.isArray(first[2])) {
+          // Try to extract variable from complex structures
+          const denominator = first[2];
+          // Look for PartialDerivative with variable: ["PartialDerivative", "x"]
+          if (Array.isArray(denominator) && denominator[0] === "PartialDerivative" && denominator.length > 1) {
+            variable = denominator[1];
+            console.log('Found variable in PartialDerivative array:', variable);
+          }
+          // Look for Multiply: ["Multiply", "PartialDerivative", "x"]
+          else if (Array.isArray(denominator) && denominator[0] === "Multiply") {
+            for (let i = 1; i < denominator.length; i++) {
+              if (typeof denominator[i] === 'string' && denominator[i] !== 'PartialDerivative') {
+                variable = denominator[i];
+                console.log('Found variable in Multiply:', variable);
+                break;
+              }
+            }
+          }
+        }
+
+        // Fallback: If variable not found in structure, try to extract from expression
+        if (!variable) {
+          // Helper to extract variable symbols from expression
+          function extractVariables(node) {
+            const vars = new Set();
+            function traverse(n) {
+              if (typeof n === 'string' && /^[a-zA-Z]$/.test(n)) {
+                vars.add(n);
+              } else if (Array.isArray(n)) {
+                n.forEach(traverse);
+              }
+            }
+            traverse(node);
+            return Array.from(vars);
+          }
+
+          const foundVars = extractVariables(expr);
+          if (foundVars.length === 1) {
+            variable = foundVars[0];
+            console.log('Inferred variable from expression:', variable);
+          } else if (foundVars.length > 1) {
+            // Multiple variables - default to first alphabetically (common convention)
+            variable = foundVars.sort()[0];
+            console.log('Multiple variables found, using first alphabetically:', variable);
+          }
+        }
+
+        // If we found a variable, create the derivative
+        if (variable) {
+          // Check if we have a function application pattern
+          if (typeof expr === 'string' && mathJSON.length >= 4 && mathJSON[3] === variable) {
+            expr = [expr, variable];
+            console.log('Fixed derivative pattern 0: ∂/∂x f(x) partial derivative detected (reconstructed function application)');
+          } else {
+            console.log('Fixed derivative pattern 0: ∂/∂x partial derivative detected');
+          }
+          return ["D", fixDerivativeNotation(expr), variable];
+        } else {
+          console.warn('Could not extract variable from partial derivative. Structure:', first);
+        }
+      }
     }
 
     // Pattern 1: ["Multiply", ["Divide", "d", ["Multiply", "d", var]], expr]
