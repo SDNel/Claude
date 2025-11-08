@@ -226,22 +226,34 @@ def _extract_integration_steps(expr: Any, var: Any) -> list:
 
 def _get_integration_rule_explanation(step_obj, rule_name: str) -> str:
     """Generate human-readable explanation for integration rule."""
-    explanations = {
-        'PowerRule': f"Apply power rule: ∫x^n dx = x^(n+1)/(n+1) + C",
-        'ConstantRule': f"Constant rule: ∫k dx = kx + C",
-        'ConstantTimesRule': f"Constant multiple rule: ∫k·f(x) dx = k·∫f(x) dx",
-        'AddRule': f"Sum rule: ∫(f + g) dx = ∫f dx + ∫g dx",
-        'SinRule': f"Integrate sine: ∫sin(x) dx = -cos(x) + C",
-        'CosRule': f"Integrate cosine: ∫cos(x) dx = sin(x) + C",
-        'ExpRule': f"Integrate exponential: ∫e^x dx = e^x + C",
-        'LogRule': f"Integrate logarithm: ∫ln(x) dx = x·ln(x) - x + C",
-        'ArctanRule': f"Integrate 1/(x²+1): ∫1/(x²+1) dx = arctan(x) + C",
-        'PartsRule': f"Integration by parts: u = {step_obj.u}, dv = {step_obj.dv}",
-        'URule': f"U-substitution",
-        'RewriteRule': f"Rewrite expression to a more integrable form",
-    }
-
-    return explanations.get(rule_name, f"Apply {rule_name}")
+    # Use conditional logic instead of dictionary to avoid evaluating f-strings prematurely
+    if rule_name == 'PowerRule':
+        return f"Apply power rule: ∫x^n dx = x^(n+1)/(n+1) + C"
+    elif rule_name == 'ConstantRule':
+        return f"Constant rule: ∫k dx = kx + C"
+    elif rule_name == 'ConstantTimesRule':
+        return f"Constant multiple rule: ∫k·f(x) dx = k·∫f(x) dx"
+    elif rule_name == 'AddRule':
+        return f"Sum rule: ∫(f + g) dx = ∫f dx + ∫g dx"
+    elif rule_name == 'SinRule':
+        return f"Integrate sine: ∫sin(x) dx = -cos(x) + C"
+    elif rule_name == 'CosRule':
+        return f"Integrate cosine: ∫cos(x) dx = sin(x) + C"
+    elif rule_name == 'ExpRule':
+        return f"Integrate exponential: ∫e^x dx = e^x + C"
+    elif rule_name == 'LogRule':
+        return f"Integrate logarithm: ∫ln(x) dx = x·ln(x) - x + C"
+    elif rule_name == 'ArctanRule':
+        return f"Integrate 1/(x²+1): ∫1/(x²+1) dx = arctan(x) + C"
+    elif rule_name == 'PartsRule':
+        # Only access .u and .dv if it's actually a PartsRule
+        return f"Integration by parts: u = {step_obj.u}, dv = {step_obj.dv}"
+    elif rule_name == 'URule':
+        return f"U-substitution"
+    elif rule_name == 'RewriteRule':
+        return f"Rewrite expression to a more integrable form"
+    else:
+        return f"Apply {rule_name}"
 
 
 
