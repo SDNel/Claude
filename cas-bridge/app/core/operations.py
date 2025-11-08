@@ -180,6 +180,7 @@ def _generate_ai_integration_steps(expr: Any, var: Any, result: Any) -> list:
     """
     try:
         from app.ai.step_generator import generate_steps_with_ai
+        from app.ai.validator import validate_steps
 
         # Convert to LaTeX for AI
         problem_latex = f"\\int {sp.latex(expr)}\\,d{sp.latex(var)}"
@@ -193,7 +194,10 @@ def _generate_ai_integration_steps(expr: Any, var: Any, result: Any) -> list:
             max_steps=10
         )
 
-        return steps
+        # Validate steps to check for hallucinations
+        validated_steps = validate_steps(steps, expr, result)
+
+        return validated_steps
 
     except Exception as e:
         # Fallback to simple step if AI fails

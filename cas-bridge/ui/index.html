@@ -261,6 +261,30 @@
     padding: 8px 0;
     text-align: center;
   }
+
+  /* Validation Badges */
+  .validation-badge {
+    display: inline-block;
+    font-size: 16px;
+    font-weight: bold;
+    margin-right: 4px;
+  }
+
+  .validation-badge.verified {
+    color: #4caf50;
+  }
+
+  .validation-badge.unverified {
+    color: #ff9800;
+  }
+
+  .validation-note {
+    font-size: 11px;
+    color: #888;
+    font-weight: normal;
+    font-style: italic;
+    margin-top: 4px;
+  }
 </style>
 </head>
 
@@ -1076,7 +1100,24 @@ window.addEventListener('load', () => {
 
       const explanation = document.createElement('div');
       explanation.className = 'step-explanation';
-      explanation.textContent = `${index + 1}. ${step.explanation}`;
+
+      // Add validation badge
+      let badge = '';
+      if (step.validated === true) {
+        badge = '<span class="validation-badge verified" title="Verified mathematically">✓</span> ';
+      } else if (step.validated === false) {
+        badge = '<span class="validation-badge unverified" title="Could not verify">⚠</span> ';
+      }
+
+      explanation.innerHTML = `${badge}${index + 1}. ${step.explanation}`;
+
+      // Add validation note if present
+      if (step.validation_note) {
+        const note = document.createElement('div');
+        note.className = 'validation-note';
+        note.textContent = step.validation_note;
+        explanation.appendChild(note);
+      }
 
       const expression = document.createElement('div');
       expression.className = 'step-expression';
