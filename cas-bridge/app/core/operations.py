@@ -92,8 +92,9 @@ import sympy as sp
 
 def _simplify(expr: Any) -> Any:
     """Simplify expression."""
-    # First expand complex expressions (e.g., e^(π*i) → -1)
-    expr = sp.expand_complex(expr)
+    # Rewrite exponentials with imaginary arguments as trig functions (Euler's formula)
+    # This converts e^(ix) → cos(x) + i*sin(x)
+    expr = expr.rewrite(sp.cos)
     # Then simplify
     return sp.simplify(expr)
 
