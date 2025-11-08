@@ -83,13 +83,22 @@ class StepNode(BaseModel):
     children: Optional[List["StepNode"]] = None
 
 
+class SimpleStep(BaseModel):
+    """Simple linear step for step-by-step solutions."""
+
+    expression: str
+    latex: str
+    explanation: str
+    depth: int = 0  # Indentation level for substeps
+
+
 class CasResult(BaseModel):
     """Result data from CAS operation."""
 
     mathjson: Optional[Any] = None
     latex: Optional[str] = None
     text: Optional[str] = None
-    steps: Optional[StepNode] = None
+    steps: Optional[Any] = None  # Can be StepNode tree or List[SimpleStep]
 
 
 class CasError(BaseModel):

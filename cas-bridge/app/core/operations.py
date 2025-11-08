@@ -159,10 +159,90 @@ def _integrate(expr: Any, vars: Optional[list], assumptions: Optional[dict], ste
         result = sp.integrate(expr, var)
 
     if steps:
-        # For now, return result without steps (steps require additional library)
-        return {"result": result, "steps": None}
+        # Extract step-by-step solution using SymPy's integral_steps
+        step_list = _extract_integration_steps(expr, var)
+        return {"result": result, "steps": step_list}
 
     return result
+
+
+def _extract_integration_steps(expr: Any, var: Any) -> list:
+    """
+    Extract step-by-step integration using SymPy's manualintegrate.
+
+    Returns a list of steps with explanations in the format:
+    [
+        {
+            "expression": "x^3/3",
+            "latex": "\\frac{x^3}{3}",
+            "explanation": "Apply power rule: ∫x^n dx = x^(n+1)/(n+1)"
+        },
+        ...
+    ]
+    """
+    try:
+        from sympy.integrals.manualintegrate import integral_steps
+        from sympy import latex
+
+        # Get the step tree
+        step_obj = integral_steps(expr, var)
+
+        # Recursively extract steps
+        def extract_steps_recursive(step_obj, depth=0):
+            steps = []
+            rule_name = type(step_obj).__name__
+            result = step_obj.eval()
+
+            # Create step with explanation
+            step = {
+                'expression': str(result),
+                'latex': latex(result),
+                'depth': depth,
+                'explanation': _get_integration_rule_explanation(step_obj, rule_name)
+            }
+            steps.append(step)
+
+            # Recursively extract substeps
+            for attr in ['v_step', 'second_step', 'substep', 'rewritten_step']:
+                if hasattr(step_obj, attr):
+                    substep_obj = getattr(step_obj, attr)
+                    if substep_obj:
+                        substeps = extract_steps_recursive(substep_obj, depth + 1)
+                        steps.extend(substeps)
+
+            return steps
+
+        return extract_steps_recursive(step_obj)
+
+    except Exception as e:
+        # If manualintegrate fails, return a simple message
+        return [{
+            'expression': str(sp.integrate(expr, var)),
+            'latex': sp.latex(sp.integrate(expr, var)),
+            'depth': 0,
+            'explanation': f'Integration computed (step-by-step unavailable: {str(e)})'
+        }]
+
+
+def _get_integration_rule_explanation(step_obj, rule_name: str) -> str:
+    """Generate human-readable explanation for integration rule."""
+    explanations = {
+        'PowerRule': f"Apply power rule: ∫x^n dx = x^(n+1)/(n+1) + C",
+        'ConstantRule': f"Constant rule: ∫k dx = kx + C",
+        'ConstantTimesRule': f"Constant multiple rule: ∫k·f(x) dx = k·∫f(x) dx",
+        'AddRule': f"Sum rule: ∫(f + g) dx = ∫f dx + ∫g dx",
+        'SinRule': f"Integrate sine: ∫sin(x) dx = -cos(x) + C",
+        'CosRule': f"Integrate cosine: ∫cos(x) dx = sin(x) + C",
+        'ExpRule': f"Integrate exponential: ∫e^x dx = e^x + C",
+        'LogRule': f"Integrate logarithm: ∫ln(x) dx = x·ln(x) - x + C",
+        'ArctanRule': f"Integrate 1/(x²+1): ∫1/(x²+1) dx = arctan(x) + C",
+        'PartsRule': f"Integration by parts: u = {step_obj.u}, dv = {step_obj.dv}",
+        'URule': f"U-substitution",
+        'RewriteRule': f"Rewrite expression to a more integrable form",
+    }
+
+    return explanations.get(rule_name, f"Apply {rule_name}")
+
 
 
 def _limit(expr: Any, vars: Optional[list], assumptions: Optional[dict]) -> Any:
