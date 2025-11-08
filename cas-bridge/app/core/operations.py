@@ -92,11 +92,26 @@ import sympy as sp
 
 def _simplify(expr: Any) -> Any:
     """Simplify expression."""
-    # Rewrite exponentials with imaginary arguments as trig functions (Euler's formula)
-    # This converts e^(ix) → cos(x) + i*sin(x)
-    expr = expr.rewrite(sp.cos)
-    # Then simplify
-    return sp.simplify(expr)
+    # Apply simplification
+    expr = sp.simplify(expr)
+
+    # For expressions that don't simplify symbolically (like e^(π*i)),
+    # evaluate numerically then convert back to exact form
+    # This handles Euler's formula: e^(π*i) → -1
+    try:
+        # Check if expression has imaginary unit or complex exponentials
+        if expr.has(sp.I) or expr.has(sp.exp):
+            # Evaluate to high precision
+            numerical = expr.evalf(30)
+            # Try to find exact symbolic form
+            exact = sp.nsimplify(numerical, rational=False, tolerance=1e-10)
+            # Only use exact form if it's simpler
+            if len(str(exact)) < len(str(expr)):
+                return exact
+    except:
+        pass
+
+    return expr
 
 
 def _expand(expr: Any) -> Any:
