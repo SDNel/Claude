@@ -374,6 +374,16 @@ window.addEventListener('load', () => {
         (lhs[0] === 'Multiply' || lhs[0] === 'InvisibleOperator')) {
       const args = lhs.slice(1);
 
+      console.log('DEBUG Case 1.5: Detected Multiply/InvisibleOperator on lhs');
+      console.log('  lhs:', JSON.stringify(lhs));
+      console.log('  args:', JSON.stringify(args));
+      console.log('  args check:', args.map(arg => ({
+        value: arg,
+        type: typeof arg,
+        length: typeof arg === 'string' ? arg.length : 'N/A',
+        isAlpha: typeof arg === 'string' && /^[a-zA-Z_]$/.test(arg)
+      })));
+
       // Check if all args are single-letter strings (single symbols)
       if (args.every(arg => typeof arg === 'string' && arg.length === 1 && /^[a-zA-Z_]$/.test(arg))) {
         // Concatenate to form potential variable name
@@ -388,6 +398,8 @@ window.addEventListener('load', () => {
             value: rhs
           };
         }
+      } else {
+        console.log('  Case 1.5 check failed - not all single-letter strings');
       }
     }
 
