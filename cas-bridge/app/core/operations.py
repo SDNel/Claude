@@ -59,6 +59,8 @@ async def execute_operation(request: CasRequest, include_steps: bool = False) ->
         result_expr = _eigen(sympy_expr)
     elif request.op.value == "evaluate":
         result_expr = _evaluate(sympy_expr)
+    elif request.op.value == "assign":
+        result_expr = _assign(sympy_expr, request.expr)
     else:
         raise ValueError(f"Unsupported operation: {request.op}")
 
@@ -203,22 +205,45 @@ def _solve(expr: Any, vars: Optional[list]) -> Any:
 
 
 def _linsolve(expr: Any) -> Any:
-    """Solve linear system."""
-    # expr should be a dict with "A" and "b" keys
-    if not isinstance(expr, dict) or "A" not in expr or "b" not in expr:
-        raise ValueError("linsolve requires a dict with 'A' (matrix) and 'b' (vector)")
+    """
+    Solve linear system.
 
-    A = expr["A"]
-    b = expr["b"]
+    Supports two formats:
+    1. Matrix form: {"A": matrix, "b": vector} for Ax = b
+    2. List of equations: [eq1, eq2, ...] for system of equations
+    """
+    # Format 1: Dict with "A" and "b" keys (existing format)
+    if isinstance(expr, dict) and "A" in expr and "b" in expr:
+        A = expr["A"]
+        b = expr["b"]
 
-    # Solve Ax = b
-    # linsolve returns a FiniteSet of solutions
-    result = sp.linsolve((A, b))
+        # Solve Ax = b
+        result = sp.linsolve((A, b))
 
-    # Convert to list for easier handling
-    if result:
-        return list(result)[0] if len(result) == 1 else list(result)
-    return result
+        # Convert to list for easier handling
+        if result:
+            return list(result)[0] if len(result) == 1 else list(result)
+        return result
+
+    # Format 2: List of equations (from ["List", eq1, eq2, ...])
+    # expr should be a list/tuple of Equality objects
+    if isinstance(expr, (list, tuple)):
+        equations = [eq for eq in expr if isinstance(eq, sp.Equality)]
+
+        if len(equations) == 0:
+            raise ValueError("linsolve requires at least one equation")
+
+        # Extract all variables from equations
+        variables = set()
+        for eq in equations:
+            variables.update(eq.free_symbols)
+
+        # Solve system
+        result = sp.solve(equations, variables)
+
+        return result
+
+    raise ValueError("linsolve requires a dict with 'A' and 'b' or a list of equations")
 
 
 def _rref(expr: Any) -> Any:
@@ -273,6 +298,67 @@ def _evaluate(expr: Any) -> Any:
     # (D -> sp.diff, Integrate -> sp.integrate, etc.)
     # Now we just simplify the result
     return sp.simplify(expr)
+
+
+def _assign(sympy_expr: Any, mathjson_expr: Any) -> Any:
+    """
+    Handle variable and function assignments.
+
+    Added 2025-11-08 to support variable registry.
+
+    Assignments are expressions with Equal where the left-hand side is:
+    - A simple identifier: A = [[1,2],[3,4]]
+    - A function definition: f(x) = x² + 1
+
+    Args:
+        sympy_expr: The SymPy expression (Equal object)
+        mathjson_expr: The original MathJSON (needed to extract variable name)
+
+    Returns:
+        The assigned value (right-hand side)
+
+    Examples:
+        A = 5 → stores A=5, returns 5
+        f(x) = x² → stores f as function, returns x²
+    """
+    from app.core.session import assign_variable
+
+    # sympy_expr should be an Equality
+    if not isinstance(sympy_expr, sp.Equality):
+        raise ValueError("Assign operation requires an equation with =")
+
+    # Extract left and right sides
+    lhs_sympy = sympy_expr.lhs
+    rhs_sympy = sympy_expr.rhs
+
+    # Determine assignment type from MathJSON (more reliable than SymPy AST)
+    if not isinstance(mathjson_expr, list) or mathjson_expr[0] != "Equal":
+        raise ValueError("Invalid assignment structure")
+
+    lhs_mathjson = mathjson_expr[1]
+
+    # Case 1: Simple variable assignment (A = value)
+    if isinstance(lhs_mathjson, str):
+        variable_name = lhs_mathjson
+        assign_variable(variable_name, rhs_sympy)
+        return rhs_sympy
+
+    # Case 2: Function definition (f(x) = expr)
+    if isinstance(lhs_mathjson, list) and len(lhs_mathjson) >= 2:
+        func_name = lhs_mathjson[0]
+        if isinstance(func_name, str):
+            # Create SymPy Lambda function
+            # Extract argument symbols from lhs
+            args = lhs_mathjson[1:]
+            arg_symbols = [sp.Symbol(arg) if isinstance(arg, str) else arg for arg in args]
+
+            # Create Lambda
+            func = sp.Lambda(tuple(arg_symbols), rhs_sympy)
+            assign_variable(func_name, func)
+            return rhs_sympy
+
+    # Fallback: store as-is
+    raise ValueError(f"Unsupported assignment type: {lhs_mathjson}")
 
 
 # Output formatters

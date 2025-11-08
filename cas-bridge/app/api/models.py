@@ -22,6 +22,7 @@ class CasOperation(str, Enum):
     EIGEN = "eigen"
     STEPS = "steps"
     EVALUATE = "evaluate"  # Added 2025-11-07: For self-contained calculus expressions
+    ASSIGN = "assign"  # Added 2025-11-08: For variable/function assignments
 
 
 class OutputFormat(str, Enum):

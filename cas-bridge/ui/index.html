@@ -321,6 +321,64 @@ window.addEventListener('load', () => {
     });
   });
 
+  // Classify an Equal operation as assignment, function definition, or equation
+  function classifyEqual(mathJSON) {
+    // mathJSON should be ["Equal", lhs, rhs]
+    if (!Array.isArray(mathJSON) || mathJSON[0] !== 'Equal' || mathJSON.length < 3) {
+      return null;
+    }
+
+    const lhs = mathJSON[1];
+    const rhs = mathJSON[2];
+
+    // Case 1: Simple identifier → Assignment
+    // Examples: A = 5, myVar = [[1,2],[3,4]]
+    if (typeof lhs === 'string') {
+      console.log('Classified as assignment: simple identifier on left');
+      return {
+        type: 'assignment',
+        variable: lhs,
+        value: rhs
+      };
+    }
+
+    // Case 2: Function application → Function definition
+    // Pattern: ["f", "x"] or ["g", "x", "y"]
+    // All elements after first must be variable names (strings)
+    if (Array.isArray(lhs) && lhs.length >= 2 && typeof lhs[0] === 'string') {
+      const funcName = lhs[0];
+      const args = lhs.slice(1);
+
+      // Check if all arguments are simple variable names
+      if (args.every(arg => typeof arg === 'string' && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(arg))) {
+        console.log('Classified as function definition:', funcName + '(' + args.join(',') + ')');
+        return {
+          type: 'function_definition',
+          functionName: funcName,
+          arguments: args,
+          body: rhs
+        };
+      }
+    }
+
+    // Case 3: Expression with operations → Equation to solve
+    // Examples: x² = 4, 2x + 3 = 7, sin(x) = 0.5
+    if (Array.isArray(lhs) && lhs.length > 0) {
+      console.log('Classified as equation: expression on left side');
+      return {
+        type: 'equation',
+        equation: mathJSON
+      };
+    }
+
+    // Default: treat as equation if unsure
+    console.log('Classified as equation (default)');
+    return {
+      type: 'equation',
+      equation: mathJSON
+    };
+  }
+
   // Auto-detect operation type from MathJSON expression
   // Matches Desmos/GeoGebra behavior - no manual operation selection needed
   function detectOperation(mathJSON) {
@@ -336,6 +394,37 @@ window.addEventListener('load', () => {
       return false;
     }
 
+    // System of equations: ["List", eq1, eq2, ...]
+    if (Array.isArray(mathJSON) && mathJSON[0] === 'List') {
+      const elements = mathJSON.slice(1);
+      const allEquations = elements.every(el =>
+        Array.isArray(el) && el[0] === 'Equal'
+      );
+
+      if (allEquations && elements.length > 1) {
+        console.log('Auto-detected: system of equations (using linsolve)');
+        return 'linsolve';
+      }
+    }
+
+    // Single equation with Equal
+    if (Array.isArray(mathJSON) && mathJSON[0] === 'Equal') {
+      const classification = classifyEqual(mathJSON);
+
+      if (classification) {
+        if (classification.type === 'assignment') {
+          console.log('Auto-detected: assignment (using assign)');
+          return 'assign';
+        } else if (classification.type === 'function_definition') {
+          console.log('Auto-detected: function definition (using assign)');
+          return 'assign';
+        } else if (classification.type === 'equation') {
+          console.log('Auto-detected: equation (using solve)');
+          return 'solve';
+        }
+      }
+    }
+
     // Self-contained calculus operations → use "evaluate"
     if (containsOperation(mathJSON, 'D')) {
       console.log('Auto-detected: derivative (using evaluate)');
@@ -348,12 +437,6 @@ window.addEventListener('load', () => {
     if (containsOperation(mathJSON, 'Limit')) {
       console.log('Auto-detected: limit (using evaluate)');
       return 'evaluate';
-    }
-
-    // Equations → use "solve"
-    if (containsOperation(mathJSON, 'Equal')) {
-      console.log('Auto-detected: equation (using solve)');
-      return 'solve';
     }
 
     // Default → simplify
